@@ -15,8 +15,8 @@ def cacla(
         device="cpu",
         discount_factor=0.99,
         # Adam optimizer settings
-        lr_v=5e-4,
-        lr_pi=1e-4,
+        lr_v=5e-5,
+        lr_pi=1e-5,
         eps=1e-5,
 ):
     """
