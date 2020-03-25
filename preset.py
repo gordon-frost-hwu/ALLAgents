@@ -67,7 +67,8 @@ def cacla(
             policy_model,
             policy_optimizer,
             env.action_space,
-            clip_grad=1.0
+            clip_grad=1.0,
+            writer=writer
         )
 
         v = VNetwork(value_model, value_optimizer, writer=writer)
