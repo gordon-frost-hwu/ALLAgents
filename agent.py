@@ -22,7 +22,7 @@ class CACLA(Agent):
         n_steps (int): Number of timesteps per rollout. Updates are performed once per rollout.
         writer (Writer): Used for logging.
     '''
-    def __init__(self, v, policy, action_space, discount_factor=1, noise=1.0, writer=DummyWriter()):
+    def __init__(self, v, policy, action_space, discount_factor=1, noise=2.0, writer=DummyWriter()):
         self.v = v
         self.policy = policy
         # self.replay_buffer = buffer
@@ -57,6 +57,9 @@ class CACLA(Agent):
 
         deterministic_action = self.policy(state)
         normal = self._normal(deterministic_action)
+        if self.noise > 0.1:
+            self.noise *= 0.999998
+        self.writer.add_scalar("sigma", self.noise)
         action = normal.sample()
         self.log_prob = normal.log_prob(action)
         # self.log_prob -= torch.log(1 - action.pow(2) + 1e-6)
@@ -83,6 +86,8 @@ class CACLA(Agent):
             # compute targets
             targets = reward + self.discount_factor * self.v.target(state)
             advantages = targets - values.detach()
+
+            self.writer.add_scalar("advantages", advantages)
 
             # compute losses
             value_loss = mse_loss(values, targets)
