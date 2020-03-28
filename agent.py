@@ -22,10 +22,17 @@ class CACLA(Agent):
         n_steps (int): Number of timesteps per rollout. Updates are performed once per rollout.
         writer (Writer): Used for logging.
     '''
-    def __init__(self, v, policy, action_space, discount_factor=1, noise=2.0, writer=DummyWriter()):
+    def __init__(self, v, policy, buffer, action_space,
+                 discount_factor=1,
+                 noise=2.0,
+                 minibatch_size=32,
+                 update_frequency=32,
+                 replay_start_size=1000,
+                 writer=DummyWriter()):
         self.v = v
         self.policy = policy
-        # self.replay_buffer = buffer
+        self.replay_buffer = buffer
+        self.minibatch_size = minibatch_size
         self.discount_factor = discount_factor
         self.writer = writer
         self.noise = noise
@@ -37,6 +44,9 @@ class CACLA(Agent):
         self._action_high = torch.tensor(action_space.high, device=policy.device)
         self.log_prob = None
         self._last_features = None
+        self._frames_seen = 0
+        self.update_frequency = update_frequency
+        self.replay_start_size = replay_start_size
         # self.gaussian = Normal(0, noise * torch.tensor((action_space.high - action_space.low) / 2).to(policy.device))
 
     def _normal(self, output):
@@ -44,8 +54,7 @@ class CACLA(Agent):
         # return Normal(output, self.noise)   # * torch.tensor((self._action_high - self._action_low) / 2))
 
     def act(self, state, reward):
-        # TODO - add in replay buffer
-        # self.replay_buffer.store(self._state, self._action, reward, state)
+        self.replay_buffer.store(self._state, self._action, reward, state)
 
         # print("state: {0}".format(state.raw))
         self._train(state, reward)
@@ -69,25 +78,28 @@ class CACLA(Agent):
         # print("exploration   action: {0}".format(action.data))
 
         # print("variance {0}".format(self._distribution.variance))
-        self._action = deterministic_action + action
+        self._action = action
         # print(type(self.writer))
         # print("stochastic action: {0}".format(self._action.data))
-        self.writer.add_scalar("action", deterministic_action)
+        self.writer.add_scalar("action", self._action)
         # print("")
         return self._action
 
     def _train(self, state, reward):
-        if self._state:
+        if self._should_train():
+            # sample from replay buffer
+            (states, actions, rewards, next_states, _) = self.replay_buffer.sample(self.minibatch_size)
+
             # forward pass
-            values = self.v(self._state)
-            if not torch.isnan(values):
-                self.writer.add_scalar("statevalue", values)
+            values = self.v(states)
+            # if not torch.isnan(values):
+            #     self.writer.add_scalar("statevalue", values[0])
 
             # compute targets
-            targets = reward + self.discount_factor * self.v.target(state)
+            targets = reward + self.discount_factor * self.v.target(next_states)
             advantages = targets - values.detach()
 
-            self.writer.add_scalar("advantages", advantages)
+            # self.writer.add_scalar("advantages", advantages)
 
             # compute losses
             value_loss = mse_loss(values, targets)
@@ -110,3 +122,7 @@ class CACLA(Agent):
             # print("policy weights before: {0}".format(self.policy.model.parameters()))
             # backward pass
             self.v.reinforce(value_loss)
+
+    def _should_train(self):
+        self._frames_seen += 1
+        return self._frames_seen > self.replay_start_size and self._frames_seen % self.update_frequency == 0

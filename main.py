@@ -10,7 +10,7 @@ def run():
     parser.add_argument("env", help="Name of the env (see envs)")
 
     parser.add_argument(
-        "--frames", type=int, default=6e5, help="The number of training frames"
+        "--frames", type=int, default=6e10, help="The number of training frames"
     )
     parser.add_argument(
         "--device",
