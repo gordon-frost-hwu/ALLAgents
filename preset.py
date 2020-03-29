@@ -16,11 +16,11 @@ def cacla(
         device="cpu",
         discount_factor=0.99,
         # Adam optimizer settings
-        lr_v=5e-5,
+        lr_v=1e-5,
         lr_pi=1e-5,
         eps=1e-5,
         # Replay buffer settings
-        replay_buffer_size=1e6
+        replay_buffer_size=32
 ):
     """
     Vanilla Actor-Critic classic control preset.

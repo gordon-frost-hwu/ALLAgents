@@ -27,7 +27,7 @@ class CACLA(Agent):
                  noise=2.0,
                  minibatch_size=32,
                  update_frequency=32,
-                 replay_start_size=1000,
+                 replay_start_size=32,
                  writer=DummyWriter()):
         self.v = v
         self.policy = policy
@@ -65,6 +65,7 @@ class CACLA(Agent):
         # self._distribution = Normal(self.policy(self._features), 0)
 
         deterministic_action = self.policy(state)
+        self.writer.add_scalar("action/det", deterministic_action)
         normal = self._normal(deterministic_action)
         if self.noise > 0.1:
             self.noise *= 0.999998
@@ -81,47 +82,51 @@ class CACLA(Agent):
         self._action = action
         # print(type(self.writer))
         # print("stochastic action: {0}".format(self._action.data))
-        self.writer.add_scalar("action", self._action)
+        self.writer.add_scalar("action/sto", self._action)
         # print("")
         return self._action
 
     def _train(self, state, reward):
         if self._should_train():
             # sample from replay buffer
-            (states, actions, rewards, next_states, _) = self.replay_buffer.sample(self.minibatch_size)
+            # (states, actions, rewards, next_states, _) = self.replay_buffer.sample(self.minibatch_size)
+            buffer_size = len(self.replay_buffer)
+            idx = 0
+            for (states, actions, rewards, next_states) in self.replay_buffer.iterate_backwards():
+                # print("state: {0}".format(states.raw))
+                # forward pass
+                values = self.v(states)
+                # if not torch.isnan(values):
+                #     self.writer.add_scalar("statevalue", values[0])
 
-            # forward pass
-            values = self.v(states)
-            # if not torch.isnan(values):
-            #     self.writer.add_scalar("statevalue", values[0])
+                # compute targets
+                targets = reward + self.discount_factor * self.v.target(states)
+                advantages = targets - values.detach()
+                # print("type of adv and log_prob: {0} {1}".format(type(advantages), type(self.log_prob)))
+                # self.writer.add_scalar("advantages", advantages)
+                # compute losses
+                policy_loss = -(advantages * self.log_prob).mean()
 
-            # compute targets
-            targets = reward + self.discount_factor * self.v.target(next_states)
-            advantages = targets - values.detach()
+                policy_loss = policy_loss.clone().detach().requires_grad_(True)       # if uncommented, policy output always zero!!
+                # print(policy_loss.data)
+                if not torch.isnan(policy_loss):
+                    self.writer.add_loss('pg', policy_loss)
+                    self.policy.reinforce(policy_loss)
+                else:
+                    print("policy loss is NaN")
 
-            # self.writer.add_scalar("advantages", advantages)
+                # print("policy loss: {0}".format(policy_loss.data))
+                # debugging
+                # self.writer.add_loss('policy_gradient', policy_gradient_loss.detach())
+                # self.writer.add_loss('entropy', entropy_loss.detach())
 
-            # compute losses
-            value_loss = mse_loss(values, targets)
-            policy_loss = -(advantages * self.log_prob).mean()
-            # policy_loss = policy_loss.clone().detach().requires_grad_(True)       # if uncommented, policy output always zero!!
-            # print(policy_loss.data)
-            if not torch.isnan(policy_loss):
-                self.writer.add_loss('pg', policy_loss)
-                self.policy.reinforce(policy_loss)
-            else:
-                print("policy loss is NaN")
-
-            # print("policy loss: {0}".format(policy_loss.data))
-            # debugging
-            # self.writer.add_loss('policy_gradient', policy_gradient_loss.detach())
-            # self.writer.add_loss('entropy', entropy_loss.detach())
-
-            # for param in self.policy.model.parameters():
-            #     print(param.data)
-            # print("policy weights before: {0}".format(self.policy.model.parameters()))
-            # backward pass
-            self.v.reinforce(value_loss)
+                # for param in self.policy.model.parameters():
+                #     print(param.data)
+                # print("policy weights before: {0}".format(self.policy.model.parameters()))
+                # backward pass
+                value_loss = mse_loss(values, targets)
+                self.v.reinforce(value_loss)
+                idx += 1
 
     def _should_train(self):
         self._frames_seen += 1
