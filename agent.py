@@ -22,13 +22,14 @@ class CACLA(Agent):
         n_steps (int): Number of timesteps per rollout. Updates are performed once per rollout.
         writer (Writer): Used for logging.
     '''
-    def __init__(self, v, policy, buffer, action_space,
+    def __init__(self, features, v, policy, buffer, action_space,
                  discount_factor=1,
                  noise=2.0,
                  minibatch_size=32,
                  update_frequency=32,
                  replay_start_size=32,
                  writer=DummyWriter()):
+        self.features = features
         self.v = v
         self.policy = policy
         self.replay_buffer = buffer
@@ -39,6 +40,7 @@ class CACLA(Agent):
         self._features = None
         self._distribution = None
         self._action = None
+        self._exploration = None
         self._state = None
         self._action_low = torch.tensor(action_space.low, device=policy.device)
         self._action_high = torch.tensor(action_space.high, device=policy.device)
@@ -54,24 +56,25 @@ class CACLA(Agent):
         # return Normal(output, self.noise)   # * torch.tensor((self._action_high - self._action_low) / 2))
 
     def act(self, state, reward):
+        self._train(state, reward)
+
         self.replay_buffer.store(self._state, self._action, reward, state)
 
-        # print("state: {0}".format(state.raw))
-        self._train(state, reward)
         self._state = state
+        self._features = self.features(state)
 
         # if self._last_features is not None:
         #     print("features: {0}".format(self._features.raw - self._last_features))
         # self._distribution = Normal(self.policy(self._features), 0)
 
-        deterministic_action = self.policy(state)
+        deterministic_action = self.policy(self._features)
         self.writer.add_scalar("action/det", deterministic_action)
-        normal = self._normal(deterministic_action)
+        self._distribution = self._normal(deterministic_action)
         if self.noise > 0.1:
-            self.noise *= 0.999998
+            self.noise *= 0.9999998
         self.writer.add_scalar("sigma", self.noise)
-        action = normal.sample()
-        self.log_prob = normal.log_prob(action)
+        action = self._distribution.sample()
+        self._exploration = action - deterministic_action
         # self.log_prob -= torch.log(1 - action.pow(2) + 1e-6)
         # self.log_prob = self.log_prob.sum(1)
 
@@ -89,44 +92,63 @@ class CACLA(Agent):
     def _train(self, state, reward):
         if self._should_train():
             # sample from replay buffer
-            # (states, actions, rewards, next_states, _) = self.replay_buffer.sample(self.minibatch_size)
-            buffer_size = len(self.replay_buffer)
-            idx = 0
-            for (states, actions, rewards, next_states) in self.replay_buffer.iterate_backwards():
-                # print("state: {0}".format(states.raw))
-                # forward pass
-                values = self.v(states)
-                # if not torch.isnan(values):
-                #     self.writer.add_scalar("statevalue", values[0])
+            (states, actions, rewards, next_states, _) = self.replay_buffer.sample(self.minibatch_size)
+            # buffer_size = len(self.replay_buffer)
+            # idx = 0
+            # for (states, actions, rewards, next_states) in self.replay_buffer.iterate_backwards():
+            # print("state: {0}".format(states.raw))
+            # forward pass
+            features = self.features(states)
+            pi_features = self.features(state)
+            values = self.v(features)
+            pi_values = self.v(pi_features)
+            if not torch.isnan(values[0]):
+                self.writer.add_scalar("statevalue", values[0])
 
-                # compute targets
-                targets = reward + self.discount_factor * self.v.target(states)
-                advantages = targets - values.detach()
-                # print("type of adv and log_prob: {0} {1}".format(type(advantages), type(self.log_prob)))
-                # self.writer.add_scalar("advantages", advantages)
-                # compute losses
-                policy_loss = -(advantages * self.log_prob).mean()
+            # compute targets
+            targets = rewards + self.discount_factor * self.v.target(self.features.target(states))
+            pi_target = reward + self.discount_factor * self.v(self.features(state))
 
-                policy_loss = policy_loss.clone().detach().requires_grad_(True)       # if uncommented, policy output always zero!!
+            if not torch.isnan(targets[0]):
+                self.writer.add_scalar("target", targets[0])
+            # advantages = targets[0] - values.detach()[0]
+            advantages = pi_target - pi_values.detach()
+            # print("type of adv and log_prob: {0} {1}".format(type(advantages), type(self.log_prob)))
+            # self.writer.add_scalar("advantages", advantages)
+            # compute losses
+            if True:
+                policy_loss = -(advantages * self._distribution.log_prob(self._action)).mean()
+                # policy_loss = policy_loss.clone().detach().requires_grad_(True)       # if uncommented, policy output always zero!!
                 # print(policy_loss.data)
                 if not torch.isnan(policy_loss):
                     self.writer.add_loss('pg', policy_loss)
                     self.policy.reinforce(policy_loss)
                 else:
                     print("policy loss is NaN")
+            else:
+                policy_loss = (self._exploration * self._distribution.log_prob(self._action)).mean()
+                # policy_loss = policy_loss.clone().detach().requires_grad_(True)       # if uncommented, policy output always zero!!
+                # print(policy_loss.data)
+                if advantages > 0:
+                    if not torch.isnan(policy_loss):
+                        self.writer.add_loss('pg', policy_loss)
+                        self.policy.reinforce(policy_loss)
+                    else:
+                        print("policy loss is NaN")
 
-                # print("policy loss: {0}".format(policy_loss.data))
-                # debugging
-                # self.writer.add_loss('policy_gradient', policy_gradient_loss.detach())
-                # self.writer.add_loss('entropy', entropy_loss.detach())
+            # print("policy loss: {0}".format(policy_loss.data))
+            # debugging
+            # self.writer.add_loss('policy_gradient', policy_gradient_loss.detach())
+            # self.writer.add_loss('entropy', entropy_loss.detach())
 
-                # for param in self.policy.model.parameters():
-                #     print(param.data)
-                # print("policy weights before: {0}".format(self.policy.model.parameters()))
-                # backward pass
-                value_loss = mse_loss(values, targets)
-                self.v.reinforce(value_loss)
-                idx += 1
+            # for param in self.policy.model.parameters():
+            #     print(param.data)
+            # print("policy weights before: {0}".format(self.policy.model.parameters()))
+            # backward pass
+            value_loss = mse_loss(values, targets)
+            self.v.reinforce(value_loss)
+            self.features.reinforce()
+            # idx += 1
 
     def _should_train(self):
         self._frames_seen += 1
