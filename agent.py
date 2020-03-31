@@ -26,7 +26,7 @@ class CACLA(Agent):
                  discount_factor=1,
                  noise=2.0,
                  minibatch_size=32,
-                 update_frequency=32,
+                 update_frequency=5,
                  replay_start_size=32,
                  writer=DummyWriter()):
         self.features = features
@@ -107,12 +107,12 @@ class CACLA(Agent):
 
             # compute targets
             targets = rewards + self.discount_factor * self.v.target(self.features.target(states))
-            pi_target = reward + self.discount_factor * self.v(self.features(state))
+            pi_target = rewards + self.discount_factor * self.v.target(self.features.target(states))
 
             if not torch.isnan(targets[0]):
                 self.writer.add_scalar("target", targets[0])
             # advantages = targets[0] - values.detach()[0]
-            advantages = pi_target - pi_values.detach()
+            advantages = pi_target - values.detach()
             # print("type of adv and log_prob: {0} {1}".format(type(advantages), type(self.log_prob)))
             # self.writer.add_scalar("advantages", advantages)
             # compute losses
@@ -121,7 +121,6 @@ class CACLA(Agent):
                 # policy_loss = policy_loss.clone().detach().requires_grad_(True)       # if uncommented, policy output always zero!!
                 # print(policy_loss.data)
                 if not torch.isnan(policy_loss):
-                    self.writer.add_loss('pg', policy_loss)
                     self.policy.reinforce(policy_loss)
                 else:
                     print("policy loss is NaN")
@@ -131,7 +130,6 @@ class CACLA(Agent):
                 # print(policy_loss.data)
                 if advantages > 0:
                     if not torch.isnan(policy_loss):
-                        self.writer.add_loss('pg', policy_loss)
                         self.policy.reinforce(policy_loss)
                     else:
                         print("policy loss is NaN")
