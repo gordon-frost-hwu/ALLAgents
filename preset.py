@@ -1,11 +1,11 @@
 from torch.optim import Adam, SGD
 from torch.optim.lr_scheduler import CosineAnnealingLR
-from all.approximation import VNetwork, FeatureNetwork
+from all.approximation import VNetwork, FeatureNetwork, PolyakTarget
 from all.bodies import TimeFeature
 from all.logging import DummyWriter
 from all.optim import LinearScheduler
 from all.memory import ExperienceReplayBuffer
-from all.policies import StochasticPolicy, GaussianPolicy, DeterministicPolicy
+from all.policies import StochasticPolicy, GaussianPolicy, DeterministicPolicy, SoftDeterministicPolicy
 from torch.distributions.normal import Normal
 
 import models
@@ -16,11 +16,12 @@ def cacla(
         device="cpu",
         discount_factor=0.99,
         # Adam optimizer settings
-        lr_v=1e-4,
+        lr_v=1e-5,
         lr_pi=1e-5,
         eps=1e-5,
+        polyak_rate=0.005,
         # Replay buffer settings
-        replay_buffer_size=1e5
+        replay_buffer_size=5
 ):
     """
     Vanilla Actor-Critic classic control preset.
@@ -33,9 +34,9 @@ def cacla(
         eps (float): Stability parameters for the Adam optimizer.
     """
     def _cacla(env, writer=DummyWriter()):
-        value_model = models.critic(env).to(device)
-        policy_model = models.actor(env).to(device)
-        feature_model = models.features(env).to(device)
+        value_model = models.critic().to(device)
+        policy_model = models.actor(env.action_space.shape[0]).to(device)
+        feature_model = models.features(env.state_space.shape[0]).to(device)
 
         value_optimizer = Adam(value_model.parameters(), lr=lr_v, eps=eps)
         policy_optimizer = Adam(policy_model.parameters(), lr=lr_pi, eps=eps)
@@ -61,12 +62,18 @@ def cacla(
             policy_optimizer,
             env.action_space,
             clip_grad=1.0,
-            writer=writer
+            writer=writer,
+            normalise_inputs=False,
+            # target=PolyakTarget(polyak_rate),
+            # scheduler=CosineAnnealingLR(
+            #     policy_optimizer,
+            #     final_anneal_step
+            # ),
         )
 
         v = VNetwork(value_model, value_optimizer, writer=writer)
         # policy = SoftmaxPolicy(policy_model, policy_optimizer, writer=writer)
-        features = FeatureNetwork(feature_model, feature_optimizer)
+        features = FeatureNetwork(feature_model, feature_optimizer, normalize_input=False)
         replay_buffer = ExperienceReplayBuffer(replay_buffer_size, device=device)
 
         return TimeFeature(CACLA(features, v, policy, replay_buffer, env.action_space, writer=writer, discount_factor=discount_factor))
