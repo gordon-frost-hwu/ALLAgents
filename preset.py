@@ -16,12 +16,12 @@ def cacla(
         device="cpu",
         discount_factor=0.99,
         # Adam optimizer settings
-        lr_v=1e-5,
-        lr_pi=1e-5,
-        eps=1e-5,
+        lr_v=1e-3,   # was 1e-5
+        lr_pi=1e-7,  # was 1e-7
+        eps=0.01,   # wsa 0.01 from https://medium.com/autonomous-learning-library/radam-a-new-state-of-the-art-optimizer-for-rl-442c1e830564
         polyak_rate=0.005,
         # Replay buffer settings
-        replay_buffer_size=5
+        replay_buffer_size=4000
 ):
     """
     Vanilla Actor-Critic classic control preset.
@@ -63,7 +63,6 @@ def cacla(
             env.action_space,
             clip_grad=1.0,
             writer=writer,
-            normalise_inputs=False,
             # target=PolyakTarget(polyak_rate),
             # scheduler=CosineAnnealingLR(
             #     policy_optimizer,
@@ -73,7 +72,7 @@ def cacla(
 
         v = VNetwork(value_model, value_optimizer, writer=writer)
         # policy = SoftmaxPolicy(policy_model, policy_optimizer, writer=writer)
-        features = FeatureNetwork(feature_model, feature_optimizer, normalize_input=False)
+        features = FeatureNetwork(feature_model, feature_optimizer, writer=writer, normalize_input=False)
         replay_buffer = ExperienceReplayBuffer(replay_buffer_size, device=device)
 
         return TimeFeature(CACLA(features, v, policy, replay_buffer, env.action_space, writer=writer, discount_factor=discount_factor))
