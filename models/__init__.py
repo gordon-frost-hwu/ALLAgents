@@ -16,21 +16,21 @@ def init_weights(m):
         torch.nn.init.xavier_uniform(m.weight)
         m.bias.data.fill_(0.001)
 
-def actor(action_space_size, hidden1=400, hidden2=300):
+def actor(env, hidden1=400, hidden2=300):
     net = nn.Sequential(
-        # nn.Linear(env.state_space.shape[0], hidden1),
-        # nn.ReLU(),
+        nn.Linear(env.state_space.shape[0], hidden1),
+        nn.ReLU(),
         nn.Linear(hidden1, hidden2),
         nn.ReLU(),
-        nn.Linear(hidden2, action_space_size)
+        nn.Linear(hidden2, env.action_space.shape[0])
     )
     net.apply(init_weights)
     return net
 
-def critic(hidden1=400, hidden2=300):
+def critic(env, hidden1=400, hidden2=300):
     net = nn.Sequential(
-        # nn.Linear(env.state_space.shape[0], hidden1),
-        # nn.ReLU(),
+        nn.Linear(env.state_space.shape[0], hidden1),
+        nn.ReLU(),
         nn.Linear(hidden1, hidden2),
         nn.ReLU(),
         nn.Linear(hidden2, 1)

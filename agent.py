@@ -32,8 +32,8 @@ class CACLA(Agent):
                  sigma_min=0.1,
                  n_iter=100,
                  minibatch_size=32,
-                 update_frequency=200,
-                 replay_start_size=100,
+                 update_frequency=1,
+                 replay_start_size=1,
                  writer=DummyWriter()):
         self.features = features
         self.v = v
@@ -83,7 +83,7 @@ class CACLA(Agent):
         return self._action
 
     def _choose_action(self, state):
-        self._features = self.features(state)
+        self._features = self.features(state) if self.features is not None else state
 
         # if self._last_features is not None:
         #     print("features: {0}".format(self._features.raw - self._last_features))
@@ -121,53 +121,20 @@ class CACLA(Agent):
         return stochastic_action
 
     def _train(self, states, rewards):
-        if self._should_train():
+        if states.done:
             for i in range(self.n_iter):
-                # sample from replay buffer
-                (states, actions, rewards, next_states, _) = self.replay_buffer.sample(self.minibatch_size)
-                # dummy_network = models.actor(1).to("cuda")
-                # dummy_features = self._dummy_features().to("cuda")
-                # # buffer_size = len(self.replay_buffer)
-                #
-                # print("====================")
-                # print(len(self.replay_buffer.buffer))
-                # for param in dummy_network.parameters():
-                #     print(param.grad)
-                # for (states, actions, rewards, next_states) in self.replay_buffer.iterate_backwards():
-                #     print(states.raw)
-                #     features = dummy_features(states.raw)
-                #     action = dummy_network(features)
-                #     for param in dummy_network.parameters():
-                #         print(param.grad)
-                #     print("--------------------")
-                #
-                # exit(0)
-                # print("state: {0}".format(states.raw))
-                # forward pass
-                features = self.features(states)
-                # pi_features = self.features(state)
-                values = self.v(features)
-                # pi_values = self.v(pi_features)
-                if not torch.isnan(values[0]):
-                    self.writer.add_scalar("statevalue", values[0])
-
-                # compute targets
-                targets = rewards + self.discount_factor * self.v.target(self.features.target(next_states))
+                _, values, targets, _ = self.generate_targets()
                 # targets = rewards + self.discount_factor * values.detach()
+                self.update_critic(values=values, targets=targets)
+                # if not torch.isnan(targets[0]):
+                #     self.writer.add_scalar("target", targets[0])
 
-                if not torch.isnan(targets[0]):
-                    self.writer.add_scalar("target", targets[0])
-
+            for i in range(self.n_iter):
+                features, values, targets, actions = self.generate_targets()
                 greedy_actions = self.policy(features)
                 self.log_prob = self._distribution.log_prob(greedy_actions)
                 # self.update_actor_ac(values=values, targets=targets)
                 self.update_actor_cacla(values=values, targets=targets, greedy_actions=greedy_actions, actions=actions)
-
-                # print("policy loss: {0}".format(policy_loss.data))
-                # debugging
-                # self.writer.add_loss('policy_gradient', policy_gradient_loss.detach())
-                # self.writer.add_loss('entropy', entropy_loss.detach())
-                self.update_critic(values=values, targets=targets)
 
             if self.sigma > self.sigma_min:
                 self.sigma *= self.sigma_decay
@@ -192,16 +159,45 @@ class CACLA(Agent):
         advantages = targets - values.detach()
         exploration = actions - greedy_actions
 
-        idx = torch.where(advantages > 0.0)
+        idx = torch.where(advantages > 0.0)[0]
+        # print("exploration: {0}".format(exploration))
+        # print("idx: {0}".format(idx))
+        # print("len(idx): {0}".format(len(idx)))
 
-        policy_loss = (exploration[idx] * self.log_prob[idx]).mean()
         # policy_loss = policy_loss.clone().detach().requires_grad_(True)       # if uncommented, policy output always zero!!
         # print(policy_loss.data)
         if len(idx) > 0:
+            # policy_loss = -(exploration[idx]).mean()    # * self.log_prob[idx]).mean()
+            policy_loss = mse_loss(greedy_actions[idx], actions[idx])
+            # print("policy loss: {0}".format(policy_loss))
+
             if not torch.isnan(policy_loss):
                 self.policy.reinforce(policy_loss)
             else:
                 print("policy loss is NaN")
+
+    def generate_targets(self):
+        # sample from replay buffer
+        (states, actions, rewards, next_states, _) = self.replay_buffer.sample(self.minibatch_size)
+
+        # forward pass
+        features = self.features(states) if self.features is not None else states
+        # pi_features = self.features(state)
+        values = self.v(features)
+        # pi_values = self.v(pi_features)
+        if not torch.isnan(values[0]):
+            self.writer.add_scalar("statevalue", values[0])
+
+        # compute targets
+        features_next_states = self.features.target(next_states) if self.features is not None else next_states
+
+        next_state_value = self.v.target(features_next_states)
+        # print("state_t value: {0}, state_t_plus_1 value: {1}".format(values[0], next_state_value[0]))
+        targets = rewards + self.discount_factor * next_state_value
+
+
+
+        return features, values, targets, actions
 
     def update_critic(self, values, targets):
         # for param in self.policy.model.parameters():
@@ -210,7 +206,8 @@ class CACLA(Agent):
         # backward pass
         value_loss = mse_loss(values, targets)
         self.v.reinforce(value_loss)
-        self.features.reinforce()
+        if self.features is not None:
+            self.features.reinforce()
         # idx += 1
 
     def _should_train(self):
