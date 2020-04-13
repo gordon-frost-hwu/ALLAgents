@@ -7,12 +7,12 @@ To run the cacla agent, you need:
 - python3
 - pip3
 - clone my forked ALL repo, and switch to the features/normalise_inputs branch.
-  - after cloning, cd autonomous-learning-library, and run:
+  - after cloning, cd autonomous-learning-library, and run
   ```
   pip3 install -e .
   ```
-- install pytorch using "pip3 install torch torchvision"
-- install tensorboard using "pip3 install tensorboard"
+- install pytorch using `pip3 install torch torchvision`
+- install tensorboard using `pip3 install tensorboard`
 
 Then, cd into ALLAgents directory, and run:
 ```
