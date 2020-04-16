@@ -15,7 +15,6 @@ class TOCLA(Agent):
     A shared feature layer can also be used, but successful results did not need it
 
     Args:
-        features (FeatureNetwork): Shared feature layers. If None, raw environment state vector is used
         v (VNetwork): Value head which approximates the state-value function.
         policy (DeterministicPolicy): Policy head which outputs an action distribution.
         buffer (ExperienceBuffer): buffer for experience replay.
@@ -27,26 +26,25 @@ class TOCLA(Agent):
         minibatch_size (int): Number of timesteps sampled per n_iter of training
         writer (Writer): Used for logging.
     '''
-    def __init__(self, features, v, policy, buffer, action_space,
+    def __init__(self, v, policy, action_space,
                  discount_factor=0.99,
+                 trace_decay=0.9,  # lambda
+                 K=10,
+                 n=0.01,
                  sigma=1.0,
                  sigma_decay=0.9995,
                  sigma_min=0.1,
-                 n_iter=100,
-                 minibatch_size=32,
                  writer=DummyWriter()):
-        self.features = features
         self.v = v
+        self.K = K
+        self.n = n
+        self.trace_decay = trace_decay
         self.policy = policy
-        self.replay_buffer = buffer
-        self.minibatch_size = minibatch_size
         self.discount_factor = discount_factor
         self.writer = writer
         self.sigma = sigma
         self.sigma_decay = sigma_decay
         self.sigma_min = sigma_min
-        self.n_iter = n_iter
-        self._features = None
         self._action = None
         self._state = None
         self._action_low = torch.tensor(action_space.low, device=policy.device)
@@ -65,8 +63,7 @@ class TOCLA(Agent):
 
     def _choose_action(self, state):
         # If a feature ANN is provided, use it, otherwise raw state vector is used
-        self._features = self.features(state) if self.features is not None else state
-        deterministic_action = self.policy.eval(self._features)
+        deterministic_action = self.policy.eval(state)
         # uncomment to log the policy output
         # self.writer.add_scalar("action/det", deterministic_action)
 
@@ -116,22 +113,14 @@ class TOCLA(Agent):
         (states, actions, rewards, next_states, _) = self.replay_buffer.sample(self.minibatch_size)
 
         # forward pass
-        features = self.features(states) if self.features is not None else states
-        values = self.v(features)
-
-        # compute targets
-        features_next_states = self.features.target(next_states) if self.features is not None else next_states
+        values = self.v(states)
 
         # compute state_{t+1} value
-        next_state_value = self.v.target(features_next_states)
+        next_state_value = self.v.target(next_states)
         targets = rewards + self.discount_factor * next_state_value
-        return features, values, targets, actions
+        return states, values, targets, actions
 
     def update_critic(self, values, targets):
         # backward pass
         value_loss = mse_loss(values, targets)
         self.v.reinforce(value_loss)
-
-        # If feature ANN given, do a backwards pass over it too (taken from VAC agent)
-        if self.features is not None:
-            self.features.reinforce()
