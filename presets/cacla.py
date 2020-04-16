@@ -5,7 +5,7 @@ from all.memory import ExperienceReplayBuffer
 from all.policies import DeterministicPolicy
 
 import models
-from agents.agent import CACLA
+from agents.cacla import CACLA
 
 def cacla(
         # Common settings
