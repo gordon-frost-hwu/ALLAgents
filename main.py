@@ -2,7 +2,6 @@
 import argparse
 from all.environments import GymEnvironment
 from all.experiments import Experiment
-from all.presets.continuous import ppo
 from preset import cacla
 
 def run():
@@ -21,9 +20,6 @@ def run():
         "--render", default=False, help="Whether to render the environment."
     )
     args = parser.parse_args()
-
-    # env_id = "MountainCarContinuous-v0"
-    # env_id = "Pendulum-v0"
 
     # create the environment
     env = GymEnvironment(args.env, device=args.device)
