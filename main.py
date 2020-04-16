@@ -2,11 +2,13 @@
 import argparse
 from all.environments import GymEnvironment
 from all.experiments import Experiment
-from preset import cacla
+# from presets.preset import cacla
+import presets
 
 def run():
     parser = argparse.ArgumentParser(description="Run a continuous actions benchmark.")
     parser.add_argument("env", help="Name of the env (see envs)")
+    parser.add_argument("agent", help="Name of the agent (e.g. cacla). See presets for available agents")
 
     parser.add_argument(
         "--frames", type=int, default=6e10, help="The number of training frames"
@@ -24,9 +26,12 @@ def run():
     # create the environment
     env = GymEnvironment(args.env, device=args.device)
 
+    agent_name = args.agent
+    agent = getattr(presets, agent_name)
+
     # run the experiment
     Experiment(
-        cacla(device=args.device), env, frames=args.frames, render=args.render
+        agent(device=args.device), env, frames=args.frames, render=args.render
     )
 
     # run the baseline agent for comparison
