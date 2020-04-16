@@ -1,12 +1,9 @@
 from torch.optim import Adam, SGD
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from all.approximation import VNetwork, FeatureNetwork, PolyakTarget
-from all.bodies import TimeFeature
+from all.approximation import VNetwork, FeatureNetwork
 from all.logging import DummyWriter
-from all.optim import LinearScheduler
 from all.memory import ExperienceReplayBuffer
-from all.policies import StochasticPolicy, GaussianPolicy, DeterministicPolicy, SoftDeterministicPolicy
-from torch.distributions.normal import Normal
+from all.policies import DeterministicPolicy
+
 
 import models
 from agent import CACLA
