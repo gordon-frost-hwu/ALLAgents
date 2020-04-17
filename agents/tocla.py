@@ -36,14 +36,18 @@ class TOCLA(Agent):
                  sigma=1.0,
                  sigma_decay=0.9995,
                  sigma_min=0.1,
+                 n_iter=100,
+                 minibatch_size=32,
                  writer=DummyWriter()):
         self.writer = writer
-
         self._action = None
         self._state = None
+        self._tde = None
 
         # Actor state
         self._replay_buffer = buffer
+        self.n_iter = n_iter
+        self.minibatch_size = minibatch_size
         self.sigma = sigma
         self.sigma_decay = sigma_decay
         self.sigma_min = sigma_min
@@ -51,7 +55,7 @@ class TOCLA(Agent):
         self._action_high = torch.tensor(action_space.high, device=policy.device)
         self.policy = policy
 
-        # Critic State
+        # Critic state
         self.v = v
         self.n = n
         self.K_max = k_max
@@ -72,27 +76,58 @@ class TOCLA(Agent):
         self._u_sync = 0
         self._u = 0
         self._i = 0
-        self._c = 1
+        self._c = 1.0
         self._v_current = 0
         self._ready = False
 
     def act(self, state, reward):
-        # self._train_critic(state)
+        self._train_critic(state, reward)
         self._train_actor(state)
-        print("stepping")
-        self._fifo.put((self._state, self._action, reward, state))
-        self._replay_buffer.store(self._state, self._action, reward, state)
+
+        if self._state is not None and self._tde is not None:
+            self._replay_buffer.store(self._state, self._tde, self._action)
 
         self._state = state
         self._action = self._choose_action(state)
         return self._action
 
-    def _train_critic(self, state):
-        # only train (update weights) at the end of an episode; i.e. at a terminal state
+    def _train_critic(self, state, reward):
+        if self._state is None:
+            return
+
+        v_next = 0 if state.done else self.v(state)
+        rho = reward + self.discount_factor * ((1.0 - self.trace_decay) * v_next)
+
+        if not self._fifo.full():
+            self._fifo.put((self._state, self._action, reward, state, rho))
+        self._tde = reward + (self.discount_factor * v_next) - self._v_current
+        self._v_current = v_next
+
+        if self._i == self.K - 1:
+            self._u = self._u_sync
+            self._u_sync = self._v_current
+            self._i = 0
+            self._c = 1.0
+            self._ready = True
+        else:
+            self._u_sync = self._u_sync + self._c * self._tde
+            self._i += 1
+            self._c *= self.discount_factor * self.trace_decay
+
+        # TODO - should this actually be before ready flag is set so that another step occurs? this is as per psuedocode
+        if self._ready:
+            self._u = self._u + self.c_final * self._tde
+            self._critic_update_weights()
+
+        # reset stuff if we reach a terminal state
         if state.done:
+            # Episode ended
             if not self._ready:
                 self._u = self._u_sync
-            # TODO - While F not empty (i.e. update weights whilst clearing queue
+
+            # Empty the queue if episode ended and train on contents
+            while not self._fifo.empty():
+                self._critic_update_weights()
 
             # reset internal variables for start of next episode
             self._u_sync = 0
@@ -104,51 +139,42 @@ class TOCLA(Agent):
             # Decay the exploration
             if self.sigma > self.sigma_min:
                 self.sigma *= self.sigma_decay
-        else:
-            pass
+
+    def _critic_update_weights(self):
+        s, u, r, sp, rp = self._fifo.get()
+        # Update critic weights
+        loss = mse_loss(self.v.eval(s), self._u)
+        self.v.reinforce(loss)
+
+        if self.K != 1:
+            self._u = (self._u - rp) / (self.discount_factor * self.trace_decay)
 
     def _train_actor(self, state):
         # only train (update weights) at the end of an episode; i.e. at a terminal state
         if state.done:
             for i in range(self.n_iter):
-                features, values, targets, actions = self.generate_targets()
+                # features, values, targets, actions = self.generate_targets()
+                features, tde, stochastic_actions = self._replay_buffer.sample(self.minibatch_size)
                 greedy_actions = self.policy(features)
-                self.update_actor_cacla(values=values, targets=targets, greedy_actions=greedy_actions, actions=actions)
+
+                # Get the indexes where the TDE is positive (i.e. the action resulted in a good state transition)
+                idx = torch.where(tde > 0.0)[0]
+                if len(idx) > 0:
+                    policy_loss = mse_loss(greedy_actions[idx], stochastic_actions[idx])
+
+                    if not torch.isnan(policy_loss):
+                        self.policy.reinforce(policy_loss)
+                    else:
+                        print("policy loss is NaN")
 
             # Decay the exploration
             if self.sigma > self.sigma_min:
                 self.sigma *= self.sigma_decay
 
-    def generate_targets(self):
-        # sample from replay buffer
-        (states, actions, rewards, next_states, _) = self._replay_buffer.sample(self.minibatch_size)
-
-        # forward pass
-        values = self.v(states)
-
-        # compute state_{t+1} value
-        next_state_value = self.v.target(next_states)
-        targets = rewards + self.discount_factor * next_state_value
-        return states, values, targets, actions
-
     def update_critic(self, values, targets):
         # backward pass
         value_loss = mse_loss(values, targets)
         self.v.reinforce(value_loss)
-
-    def update_actor_cacla(self, targets, values, greedy_actions, actions):
-        # calculate TDE
-        advantages = targets - values.detach()
-
-        # Get the indexes where the TDE is positive (i.e. the action resulted in a good state transition)
-        idx = torch.where(advantages > 0.0)[0]
-        if len(idx) > 0:
-            policy_loss = mse_loss(greedy_actions[idx], actions[idx])
-
-            if not torch.isnan(policy_loss):
-                self.policy.reinforce(policy_loss)
-            else:
-                print("policy loss is NaN")
 
     def _normal(self, output):
         self.writer.add_scalar("sigma", self.sigma)
