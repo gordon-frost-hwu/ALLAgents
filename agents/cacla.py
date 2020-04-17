@@ -15,16 +15,17 @@ class CACLA(Agent):
     A shared feature layer can also be used, but successful results did not need it
 
     Args:
-        features (FeatureNetwork): Shared feature layers. If None, raw environment state vector is used
+        features (FeatureNetwork): Shared feature layers. If None, raw environment state vector is used.
         v (VNetwork): Value head which approximates the state-value function.
         policy (DeterministicPolicy): Policy head which outputs an action distribution.
         buffer (ExperienceBuffer): buffer for experience replay.
+        action_space (Box): OpenAi Gym environment's action space.
         discount_factor (float): Discount factor for future rewards.
-        sigma (float): initial variance of Normal distribution used for exploration
-        sigma_decay (float): decay rate for exploration
-        sigma_min (float): minimum value for exploration
-        n_iter (int): Number of times to sample the replay buffer when training
-        minibatch_size (int): Number of timesteps sampled per n_iter of training
+        sigma (float): initial variance of Normal distribution used for exploration.
+        sigma_decay (float): decay rate for exploration.
+        sigma_min (float): minimum value for exploration.
+        n_iter (int): Number of times to sample the replay buffer when training.
+        minibatch_size (int): Number of timesteps sampled per n_iter of training.
         writer (Writer): Used for logging.
     '''
     def __init__(self, features, v, policy, buffer, action_space,
