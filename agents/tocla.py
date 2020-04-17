@@ -3,6 +3,8 @@ from torch.nn.functional import mse_loss
 from all.logging import DummyWriter
 from torch.distributions.normal import Normal
 from all.agents import Agent
+from queue import Queue
+import numpy as np
 
 class TOCLA(Agent):
     '''
@@ -26,65 +28,88 @@ class TOCLA(Agent):
         minibatch_size (int): Number of timesteps sampled per n_iter of training
         writer (Writer): Used for logging.
     '''
-    def __init__(self, v, policy, action_space,
+    def __init__(self, v, policy, buffer, action_space,
                  discount_factor=0.99,
                  trace_decay=0.9,  # lambda
-                 K=10,
+                 k_max=50,
                  n=0.01,
                  sigma=1.0,
                  sigma_decay=0.9995,
                  sigma_min=0.1,
                  writer=DummyWriter()):
-        self.v = v
-        self.K = K
-        self.n = n
-        self.trace_decay = trace_decay
-        self.policy = policy
-        self.discount_factor = discount_factor
         self.writer = writer
+
+        self._action = None
+        self._state = None
+
+        # Actor state
+        self._replay_buffer = buffer
         self.sigma = sigma
         self.sigma_decay = sigma_decay
         self.sigma_min = sigma_min
-        self._action = None
-        self._state = None
         self._action_low = torch.tensor(action_space.low, device=policy.device)
         self._action_high = torch.tensor(action_space.high, device=policy.device)
+        self.policy = policy
 
-    def _normal(self, output):
-        self.writer.add_scalar("sigma", self.sigma)
-        return Normal(output, self.sigma)
+        # Critic State
+        self.v = v
+        self.n = n
+        self.K_max = k_max
+        self.trace_decay = trace_decay
+        self.discount_factor = discount_factor
+
+        # Calculate K
+        self.K = np.ceil(np.log(n) / np.log(self.discount_factor * self.trace_decay)) if \
+            (self.discount_factor * self.trace_decay) > 0 else 1
+        self.K = np.min([self.K_max, self.K])
+        self._fifo = Queue(self.K)
+        print("K parameter set to: {0}".format(self.K))
+
+        self.c_final = np.power(self.discount_factor * self.trace_decay, self.K - 1)
+        print("c_final parameter set to: {0}".format(self.c_final))
+
+        # Algorithm internal variables
+        self._u_sync = 0
+        self._u = 0
+        self._i = 0
+        self._c = 1
+        self._v_current = 0
+        self._ready = False
 
     def act(self, state, reward):
-        self._train(state)
-        self.replay_buffer.store(self._state, self._action, reward, state)
+        # self._train_critic(state)
+        self._train_actor(state)
+        print("stepping")
+        self._fifo.put((self._state, self._action, reward, state))
+        self._replay_buffer.store(self._state, self._action, reward, state)
+
         self._state = state
         self._action = self._choose_action(state)
         return self._action
 
-    def _choose_action(self, state):
-        # If a feature ANN is provided, use it, otherwise raw state vector is used
-        deterministic_action = self.policy.eval(state)
-        # uncomment to log the policy output
-        # self.writer.add_scalar("action/det", deterministic_action)
-
-        # Get the stochastic action by centering a Normal distribution on the policy output
-        stochastic_action = self._normal(deterministic_action).sample()
-
-        # Clip the stochastic action to the gym environment's action space
-        stochastic_action = torch.max(stochastic_action, self._action_low)
-        stochastic_action = torch.min(stochastic_action, self._action_high)
-        return stochastic_action
-
-    def _train(self, states):
+    def _train_critic(self, state):
         # only train (update weights) at the end of an episode; i.e. at a terminal state
-        if states.done:
-            for i in range(self.n_iter):
-                _, values, targets, _ = self.generate_targets()
-                # targets = rewards + self.discount_factor * values.detach()
-                self.update_critic(values=values, targets=targets)
-                # if not torch.isnan(targets[0]):
-                #     self.writer.add_scalar("target", targets[0])
+        if state.done:
+            if not self._ready:
+                self._u = self._u_sync
+            # TODO - While F not empty (i.e. update weights whilst clearing queue
 
+            # reset internal variables for start of next episode
+            self._u_sync = 0
+            self._i = 0
+            self._c = 1
+            self._v_current = 0
+            self._ready = False
+
+            # Decay the exploration
+            if self.sigma > self.sigma_min:
+                self.sigma *= self.sigma_decay
+        else:
+            pass
+
+    def _train_actor(self, state):
+        # only train (update weights) at the end of an episode; i.e. at a terminal state
+        if state.done:
             for i in range(self.n_iter):
                 features, values, targets, actions = self.generate_targets()
                 greedy_actions = self.policy(features)
@@ -93,6 +118,23 @@ class TOCLA(Agent):
             # Decay the exploration
             if self.sigma > self.sigma_min:
                 self.sigma *= self.sigma_decay
+
+    def generate_targets(self):
+        # sample from replay buffer
+        (states, actions, rewards, next_states, _) = self._replay_buffer.sample(self.minibatch_size)
+
+        # forward pass
+        values = self.v(states)
+
+        # compute state_{t+1} value
+        next_state_value = self.v.target(next_states)
+        targets = rewards + self.discount_factor * next_state_value
+        return states, values, targets, actions
+
+    def update_critic(self, values, targets):
+        # backward pass
+        value_loss = mse_loss(values, targets)
+        self.v.reinforce(value_loss)
 
     def update_actor_cacla(self, targets, values, greedy_actions, actions):
         # calculate TDE
@@ -108,19 +150,20 @@ class TOCLA(Agent):
             else:
                 print("policy loss is NaN")
 
-    def generate_targets(self):
-        # sample from replay buffer
-        (states, actions, rewards, next_states, _) = self.replay_buffer.sample(self.minibatch_size)
+    def _normal(self, output):
+        self.writer.add_scalar("sigma", self.sigma)
+        return Normal(output, self.sigma)
 
-        # forward pass
-        values = self.v(states)
+    def _choose_action(self, state):
+        # If a feature ANN is provided, use it, otherwise raw state vector is used
+        deterministic_action = self.policy.eval(state)
+        # uncomment to log the policy output
+        # self.writer.add_scalar("action/det", deterministic_action)
 
-        # compute state_{t+1} value
-        next_state_value = self.v.target(next_states)
-        targets = rewards + self.discount_factor * next_state_value
-        return states, values, targets, actions
+        # Get the stochastic action by centering a Normal distribution on the policy output
+        stochastic_action = self._normal(deterministic_action).sample()
 
-    def update_critic(self, values, targets):
-        # backward pass
-        value_loss = mse_loss(values, targets)
-        self.v.reinforce(value_loss)
+        # Clip the stochastic action to the gym environment's action space
+        stochastic_action = torch.max(stochastic_action, self._action_low)
+        stochastic_action = torch.min(stochastic_action, self._action_high)
+        return stochastic_action
