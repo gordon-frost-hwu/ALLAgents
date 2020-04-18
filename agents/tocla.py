@@ -85,7 +85,7 @@ class TOCLA(Agent):
         self._train_actor(state)
 
         if self._state is not None and self._tde is not None:
-            self._replay_buffer.store(self._state, self._tde, self._action)
+            self._replay_buffer.store(self._state, self._action, self._tde, state)
 
         self._state = state
         self._action = self._choose_action(state)
@@ -154,7 +154,7 @@ class TOCLA(Agent):
         if state.done:
             for i in range(self.n_iter):
                 # features, values, targets, actions = self.generate_targets()
-                features, tde, stochastic_actions = self._replay_buffer.sample(self.minibatch_size)
+                features, stochastic_actions, tde, _ = self._replay_buffer.sample(self.minibatch_size)
                 greedy_actions = self.policy(features)
 
                 # Get the indexes where the TDE is positive (i.e. the action resulted in a good state transition)
