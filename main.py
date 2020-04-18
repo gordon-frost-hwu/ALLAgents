@@ -10,6 +10,9 @@ def run():
     parser.add_argument("agent", help="Name of the agent (e.g. cacla). See presets for available agents")
 
     parser.add_argument(
+        "--episodes", type=int, default=2000, help="The number of training episodes"
+    )
+    parser.add_argument(
         "--frames", type=int, default=6e10, help="The number of training frames"
     )
     parser.add_argument(
@@ -28,15 +31,23 @@ def run():
     agent_name = args.agent
     agent = getattr(presets, agent_name)
 
-    # run the experiment
-    Experiment(
-        agent(device=args.device), env, frames=args.frames, render=args.render
-    )
+    # configure desired baseline (run sequentially)
+    run_baseline = True
+    baseline_agent_name = "cacla"
+    baseline_agent = getattr(presets, baseline_agent_name)
 
-    # run the baseline agent for comparison
-    # Experiment(
-    #     ppo(device=args.device), env, frames=args.frames, render=args.render
-    # )
+    num_repeats = 10
+    for i in range(num_repeats):
+        # run the experiment
+        Experiment(
+            agent(device=args.device), env, episodes=args.episodes, frames=args.frames, render=args.render
+        )
+
+        if run_baseline:
+            # run the baseline agent for comparison
+            Experiment(
+                baseline_agent(device=args.device), env, episodes=args.episodes, frames=args.frames, render=args.render
+            )
 
 
 if __name__ == "__main__":
