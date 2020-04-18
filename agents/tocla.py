@@ -56,7 +56,7 @@ class TOCLA(Agent):
         self.policy = policy
 
         # Critic state
-        self.v = v
+        self.critic = v
         self.n = n
         self.K_max = k_max
         self.trace_decay = trace_decay
@@ -95,7 +95,10 @@ class TOCLA(Agent):
         if self._state is None:
             return
 
-        v_next = 0 if state.done else self.v(state)
+        # compute the state value for t+1 timestep
+        # detach the Torch Tensor (make leaf node?) to avoid generated graphs being shared
+        # and inhibiting consectutive backward passes
+        v_next = 0 if state.done else self.critic(state).detach()
         rho = reward + self.discount_factor * ((1.0 - self.trace_decay) * v_next)
 
         if not self._fifo.full():
@@ -143,8 +146,8 @@ class TOCLA(Agent):
     def _critic_update_weights(self):
         s, u, r, sp, rp = self._fifo.get()
         # Update critic weights
-        loss = mse_loss(self.v.eval(s), self._u)
-        self.v.reinforce(loss)
+        loss = mse_loss(self.critic(s), self._u)
+        self.critic.reinforce(loss)
 
         if self.K != 1:
             self._u = (self._u - rp) / (self.discount_factor * self.trace_decay)
@@ -154,7 +157,7 @@ class TOCLA(Agent):
         if state.done:
             for i in range(self.n_iter):
                 # features, values, targets, actions = self.generate_targets()
-                features, stochastic_actions, tde, _ = self._replay_buffer.sample(self.minibatch_size)
+                features, stochastic_actions, tde, _, _ = self._replay_buffer.sample(self.minibatch_size)
                 greedy_actions = self.policy(features)
 
                 # Get the indexes where the TDE is positive (i.e. the action resulted in a good state transition)
@@ -174,7 +177,7 @@ class TOCLA(Agent):
     def update_critic(self, values, targets):
         # backward pass
         value_loss = mse_loss(values, targets)
-        self.v.reinforce(value_loss)
+        self.critic.reinforce(value_loss)
 
     def _normal(self, output):
         self.writer.add_scalar("sigma", self.sigma)
