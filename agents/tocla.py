@@ -9,12 +9,13 @@ import numpy as np
 class TOCLA(Agent):
     '''
     True Online Continuous Learning Automation (TOCLA)
-    CACLA is an implementation of the CACLA alogorithm found in van Hasselt and Wiering (2007).
-    http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.75.7658&rep=rep1&type=pdf
-    This implementation tweaks the algorithm slightly by only updating weights at the end of an episode
-    and using a replay buffer to collect interaction samples. At the end of the episode, the replay buffer
-    gets sampled n_iter times to train the critic, and then separately another n_iter times to train actor
-    A shared feature layer can also be used, but successful results did not need it
+    This algorithm uses the CACLA actor-update rule (of van Hasselt and Wiering (2007)) and the
+    Forward TD(lambda) algorithm for critic state-value estimates.
+    This implementation tweaks the CACLA actor implementation slightly by only updating weights at the end
+    of an episode and using a replay buffer to collect interaction samples. At the end of the episode,
+    the replay buffer gets sampled n_iter times.
+    CACLA: http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.75.7658&rep=rep1&type=pdf
+    Forward TD(lambda): https://arxiv.org/pdf/1608.05151.pdf
 
     Args:
         v (VNetwork): Value head which approximates the state-value function.
