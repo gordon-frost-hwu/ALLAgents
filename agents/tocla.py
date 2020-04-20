@@ -85,6 +85,7 @@ class TOCLA(Agent):
         self._train_actor(state)
 
         if self._state is not None and self._tde is not None:
+            self.writer.add_scalar("state/tde", self._tde)
             self._replay_buffer.store(self._state, self._action, self._tde, state)
 
         self._state = state
@@ -98,7 +99,7 @@ class TOCLA(Agent):
         # compute the state value for t+1 timestep
         # detach the Torch Tensor (make leaf node?) to avoid generated graphs being shared
         # and inhibiting consectutive backward passes
-        v_next = 0 if state.done else self.critic(state).detach()
+        v_next = 0 if state.done else self.critic.target(state).detach()
         rho = reward + self.discount_factor * ((1.0 - self.trace_decay) * v_next)
 
         if not self._fifo.full():
@@ -134,20 +135,20 @@ class TOCLA(Agent):
 
             # reset internal variables for start of next episode
             self._u_sync = 0
+            # print("u sync set to 0: self._u: {0}".format(self._u))
             self._i = 0
             self._c = 1
             self._v_current = 0
             self._ready = False
 
-            # Decay the exploration
-            if self.sigma > self.sigma_min:
-                self.sigma *= self.sigma_decay
-
     def _critic_update_weights(self):
         s, u, r, sp, rp = self._fifo.get()
         # Update critic weights
-        loss = mse_loss(self.critic(s), self._u)
+        v = self.critic(s)
+        loss = mse_loss(v, self._u)
         self.critic.reinforce(loss)
+        # self.writer.add_scalar("state/value", v[0])
+        # self.writer.add_scalar("state/target", self._u[0])
 
         if self.K != 1:
             self._u = (self._u - rp) / (self.discount_factor * self.trace_decay)
