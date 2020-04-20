@@ -32,11 +32,11 @@ def run():
     agent = getattr(presets, agent_name)
 
     # configure desired baseline (run sequentially)
-    run_baseline = True
+    run_baseline = False
     baseline_agent_name = "cacla"
     baseline_agent = getattr(presets, baseline_agent_name)
 
-    num_repeats = 10
+    num_repeats = 5
     for i in range(num_repeats):
         # run the experiment
         Experiment(
