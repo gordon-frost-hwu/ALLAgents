@@ -16,7 +16,9 @@ def cacla(
         lr_pi=1e-4,
         eps=0.01,   # from https://medium.com/autonomous-learning-library/radam-a-new-state-of-the-art-optimizer-for-rl-442c1e830564
         # Replay buffer settings
-        replay_buffer_size=4000
+        replay_buffer_size=4000,
+        hidden1=400,
+        hidden2=300,
 ):
     """
     Continuous Actor Critic Learning Automation (CACLA) classic control preset.
@@ -30,8 +32,8 @@ def cacla(
         replay_buffer_size (int): maximum replay buffer size that samples get taken from
     """
     def _cacla(env, writer=DummyWriter()):
-        value_model = models.critic(env).to(device)
-        policy_model = models.actor(env).to(device)
+        value_model = models.critic(env, hidden1=hidden1, hidden2=hidden2).to(device)
+        policy_model = models.actor(env, hidden1=hidden1, hidden2=hidden2).to(device)
         # feature_model = models.features(env.state_space.shape[0]).to(device)
 
         value_optimizer = Adam(value_model.parameters(), lr=lr_v, eps=eps)
