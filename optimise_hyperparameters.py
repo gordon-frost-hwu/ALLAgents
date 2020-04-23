@@ -35,8 +35,8 @@ class OptimisePreset(object):
         ga = pyeasyga.GeneticAlgorithm(self.seed_data,
                                        population_size=8,
                                        generations=200,
-                                       crossover_probability=0.8,
-                                       mutation_probability=0.05,
+                                       crossover_probability=0.2,
+                                       mutation_probability=0.8,   # 0.05
                                        elitism=True,
                                        maximise_fitness=False)
         # assign callback methods
@@ -47,34 +47,37 @@ class OptimisePreset(object):
         ga.crossover_function = self.crossover
         ga.run()
 
-    def check_for_past_fitness(self, individual):
-        search_key = np.array(individual)
-        closest_individual = self.ind_lookup.get(search_key) or self.ind_lookup[
-            min(self.ind_lookup.keys(), key=lambda key: abs(key - search_key))]
-        if closest_individual - search_key < 1e-2:
-            return closest_individual
-        else:
-            return None
+    def check_for_past_result(self, individual):
+        closest = None
+        tolerance = 1e-4
+        for key in self.ind_lookup.keys():
+            diff = np.array(key) - np.array(individual)
+            match = all(abs(d) < tolerance for d in diff)
+            if match:
+                print("Individual {0} matched with {1}".format(individual, key))
+                closest = key
+        return closest
 
     def fitness(self, individual, data):
-        print("Running individual: {0}".format(individual))
-        # TODO - check for pre-done individual fitness (i.e. look up from past)
-        closest = self.check_for_past_fitness(individual)
+        # Check if the individual has been run before
+        closest = self.check_for_past_result(individual)
         if closest is not None:
-            print("Similar individual run in past")
-            print("new  individual: {0}".format(individual))
-            print("past individual: {0}".format(closest))
+            # print("Similar individual run in past")
+            # print("new  individual: {0}".format(individual))
+            # print("past individual: {0}".format(closest))
             return self.ind_lookup[closest]
+
+        print("Running individual: {0}".format(individual))
 
         # create the environment and agent
         env = GymEnvironment(self.args.env, device=self.args.device)
         experiment = OptimisationExperiment(
-            self.agent(device=args.device, lr_v=individual[0], lr_pi=individual[1]), env,
+            self.agent(device=args.device, lr_pi=individual[1], lr_v=individual[0]), env,
             episodes=args.episodes,
             frames=args.frames,
             render=args.render,
             log=True,
-            quiet=False,
+            quiet=True,
             write_loss=False,
             write_episode_return=True,
             writer=self._make_writer(self.agent_name, env.name, self._write_loss, self.result_dir),
@@ -82,10 +85,12 @@ class OptimisePreset(object):
         returns = np.array(experiment.runner.rewards)     # returns against episodes
         solved_return_value = np.array([100.0 for x in range(len(returns))])
         fitness = sum(solved_return_value - returns)
+
+        # Log stuff
         log_entry_individual = '\t'.join(map(str, individual))
         log_entry = log_entry_individual + "\t" + str(fitness) + "\n"
         self.ga_log_file.write(log_entry)
-        self.ind_lookup[np.array(individual)] = fitness
+        self.ind_lookup[tuple(individual)] = fitness
         self.ga_log_file.flush()
         self.individual_id += 1
         return fitness
@@ -103,7 +108,10 @@ class OptimisePreset(object):
         mutate_index = random.randrange(len(individual))
         field_key = self.seed_data[mutate_index][0]
         bounds = self.bounds[field_key]
-        individual[mutate_index] == random.uniform(bounds[0], bounds[1])
+        # individual[mutate_index] == random.uniform(bounds[0], bounds[1])
+        random_value = np.random.normal(scale=0.1)
+        individual[mutate_index] = np.clip(individual[mutate_index] + random_value,
+                                           bounds[0], bounds[1])
 
     def create_individual(self, data):
         print("create_individual data: {0}".format(data))
