@@ -32,11 +32,12 @@ class OptimisePreset(object):
         # TODO - add normaliser here and pass down into agent
 
     def run(self):
+        num_generations = 500
         ga = pyeasyga.GeneticAlgorithm(self.seed_data,
                                        population_size=8,
-                                       generations=200,
-                                       crossover_probability=0.2,
-                                       mutation_probability=0.8,   # 0.05
+                                       generations=num_generations,
+                                       crossover_probability=0.8,
+                                       mutation_probability=0.2,   # 0.05
                                        elitism=True,
                                        maximise_fitness=False)
         # assign callback methods
@@ -109,7 +110,7 @@ class OptimisePreset(object):
         field_key = self.seed_data[mutate_index][0]
         bounds = self.bounds[field_key]
         # individual[mutate_index] == random.uniform(bounds[0], bounds[1])
-        random_value = np.random.normal(scale=0.1)
+        random_value = np.random.normal(scale=0.001)
         individual[mutate_index] = np.clip(individual[mutate_index] + random_value,
                                            bounds[0], bounds[1])
 
