@@ -28,25 +28,45 @@ class OptimisePreset(object):
         self.ga_log_file = open("{0}/GaEvolution.fso".format(self.result_dir), "w+")
         self.ind_lookup = {}
         self.individual_id = 0
+        self.ga_generation_file = open("{0}/GenerationEvolution.fso".format(self.result_dir), "w+")
+
+        num_generations = 500
+        self.ga = pyeasyga.GeneticAlgorithm(self.seed_data,
+                                           population_size=4,
+                                           generations=num_generations,
+                                           crossover_probability=0.8,
+                                           mutation_probability=0.2,  # 0.05
+                                           elitism=True,
+                                           maximise_fitness=False)
+        # assign callback methods
+        self.ga.fitness_function = self.fitness
+        self.ga.create_individual = self.create_individual
+        self.ga.mutate_function = self.mutate
+        self.ga.selection_function = self.selection
+        self.ga.crossover_function = self.crossover
+        self.ga.run = self.ga_run
 
         # TODO - add normaliser here and pass down into agent
 
     def run(self):
-        num_generations = 500
-        ga = pyeasyga.GeneticAlgorithm(self.seed_data,
-                                       population_size=8,
-                                       generations=num_generations,
-                                       crossover_probability=0.8,
-                                       mutation_probability=0.2,   # 0.05
-                                       elitism=True,
-                                       maximise_fitness=False)
-        # assign callback methods
-        ga.fitness_function = self.fitness
-        ga.create_individual = self.create_individual
-        ga.mutate_function = self.mutate
-        ga.selection_function = self.selection
-        ga.crossover_function = self.crossover
-        ga.run()
+
+        self.ga.run()
+
+    def ga_run(self):
+        """Run (solve) the Genetic Algorithm."""
+        self.ga.create_first_generation()
+        self.log_best_in_generation()
+
+        for _ in range(1, self.ga.generations):
+            self.ga.create_next_generation()
+            self.log_best_in_generation()
+
+    def log_best_in_generation(self):
+        best_fitness, best_genes = self.ga.best_individual()
+        log_entry_individual = '\t'.join(map(str, best_genes))
+        log_entry = log_entry_individual + "\t" + str(best_fitness) + "\n"
+        self.ga_generation_file.write(log_entry)
+        self.ga_generation_file.flush()
 
     def check_for_past_result(self, individual):
         closest = None
@@ -61,12 +81,14 @@ class OptimisePreset(object):
 
     def fitness(self, individual, data):
         # Check if the individual has been run before
-        closest = self.check_for_past_result(individual)
-        if closest is not None:
-            # print("Similar individual run in past")
-            # print("new  individual: {0}".format(individual))
-            # print("past individual: {0}".format(closest))
-            return self.ind_lookup[closest]
+        # closest = self.check_for_past_result(individual)
+        # if closest is not None:
+        #     # print("Similar individual run in past")
+        #     # print("new  individual: {0}".format(individual))
+        #     # print("past individual: {0}".format(closest))
+        #     fitness = self.ind_lookup[closest]
+        #     self.log_individual(0, individual, fitness)
+        #     return fitness
 
         print("Running individual: {0}".format(individual))
 
@@ -88,13 +110,16 @@ class OptimisePreset(object):
         fitness = sum(solved_return_value - returns)
 
         # Log stuff
+        self.log_individual(1, individual, fitness)
+        self.individual_id += 1
+        return fitness
+
+    def log_individual(self, executed, individual, fitness):
         log_entry_individual = '\t'.join(map(str, individual))
-        log_entry = log_entry_individual + "\t" + str(fitness) + "\n"
+        log_entry = str(executed) + "\t" + log_entry_individual + "\t" + str(fitness) + "\n"
         self.ga_log_file.write(log_entry)
         self.ind_lookup[tuple(individual)] = fitness
         self.ga_log_file.flush()
-        self.individual_id += 1
-        return fitness
 
     def selection(self, population):
         return random.choice(population)
@@ -110,13 +135,14 @@ class OptimisePreset(object):
         field_key = self.seed_data[mutate_index][0]
         bounds = self.bounds[field_key]
         # individual[mutate_index] == random.uniform(bounds[0], bounds[1])
-        random_value = np.random.normal(scale=0.001)
+        random_value = np.random.normal(scale=0.01)
         individual[mutate_index] = np.clip(individual[mutate_index] + random_value,
                                            bounds[0], bounds[1])
 
     def create_individual(self, data):
-        print("create_individual data: {0}".format(data))
-        return [random.uniform(self.bounds[name][0], self.bounds[name][1]) for (name, value) in data]
+        individual = [random.uniform(self.bounds[name][0], self.bounds[name][1]) for (name, value) in data]
+        print("create_individual data: {0}".format(individual))
+        return individual
 
     def create_result_dir(self, agent_name, env_name):
         idxs = [0]
