@@ -66,6 +66,7 @@ def generate_indices_randomly(array_size, num_indices):
     # print(entry_indices)
     return indices
 
+
 def get_n_best(array, number_of_indices, minimise=True):
     """
     :param array: 1D numpy array of floats
@@ -89,6 +90,34 @@ def get_n_best(array, number_of_indices, minimise=True):
     return parents
 
 
+def update_population_using_elitism(population,
+                                    parents, parents_fitness,
+                                    children, children_fitness,
+                                    minimise=True):
+    print("-----update_population_using_elitism()-----")
+    print(population)
+    children_copy = deepcopy(children)
+    children_fitness_copy = deepcopy(children_fitness)
+    mask = numpy.ones(children_copy.shape[0], dtype=bool)
+    for parent, fitness_p in zip(parents, parents_fitness):
+        best_child = None
+        best_child_fitness = None
+        idx = 0
+        for child, fitness_c in zip(children_copy[mask], children_fitness_copy[mask]):
+            elitism_condition = fitness_c < fitness_p if minimise else fitness_c > fitness_p
+            child_better_condition = fitness_c < best_child_fitness if minimise else fitness_c > best_child_fitness
+            if elitism_condition and best_child_fitness is None or child_better_condition:
+                best_child = child
+                best_child_fitness = fitness_c
+                # Hide the best child that has already been used
+                mask[idx] = False
+            idx += 1
+
+        if best_child is not None:
+            row_index = get_row_index(population, parent)
+            if row_index is not None:
+                population[row_index, :] = best_child
+    return True
 
 
 def crossover(parents, offspring_size):
@@ -127,6 +156,12 @@ def mutation(offspring_crossover, num_mutations=1):
     print("MUTATION FUNC - End")
 
     return offspring_crossover
+
+def get_row_index(array, row):
+    for idx, _row in zip(range(array.shape[0]), array):
+        if numpy.allclose(row, _row, atol=0.01):
+            return idx
+    return None
 
 
 def mutation_gaussian(offspring, mu, sigma, indpb):

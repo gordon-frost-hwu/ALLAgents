@@ -54,6 +54,30 @@ class GaUnitTests(unittest.TestCase):
             self.assertTrue(len(indices) == 4)
             self.assertTrue(len(indices) == len(set(indices)))
 
+    def test_elitism_population_update(self):
+        self.generate_test_data()
+        parents = np.array([[-0.64454314,  0.63685633,  0.7274629 , -1.15782712],
+                            [-0.5904881 , -1.4635747 , -1.74232884, -2.23014166]])
+        indexes_of_parents = [ga.get_row_index(self.population, i) for i in parents]
+        self.assertTrue(indexes_of_parents == [5, 4])
+
+        parents_fitness = np.array(self.fitness[indexes_of_parents])
+
+        # Hard-code some offspring and their fitness
+        offspring = np.array([[0,  0.0, -0.0, -0.0],
+                               [-1 , -1 ,  1 , 1],
+                               [-2,  -2, 2, 2],
+                               [3 , 3,  3 , 3]])
+        offspring_fitness = np.array([[ 0.06463767],
+                                   [-25.117041],
+                                   [-0.77317639],
+                                   [-14.234]])
+        population_copy = deepcopy(self.population)
+        print(population_copy)
+        ga.update_population_using_elitism(population_copy,
+                                           parents, parents_fitness,
+                                           offspring, offspring_fitness)
+        print(population_copy)
 
 if __name__ == '__main__':
 
