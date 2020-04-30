@@ -94,8 +94,6 @@ def update_population_using_elitism(population,
                                     parents, parents_fitness,
                                     children, children_fitness,
                                     minimise=True):
-    print("-----update_population_using_elitism()-----")
-    print(population)
     children_copy = deepcopy(children)
     children_fitness_copy = deepcopy(children_fitness)
     mask = numpy.ones(children_copy.shape[0], dtype=bool)

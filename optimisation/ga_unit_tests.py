@@ -73,11 +73,15 @@ class GaUnitTests(unittest.TestCase):
                                    [-0.77317639],
                                    [-14.234]])
         population_copy = deepcopy(self.population)
+        print("Population before elitism update:")
         print(population_copy)
         ga.update_population_using_elitism(population_copy,
                                            parents, parents_fitness,
                                            offspring, offspring_fitness)
+        print("Population after elitism update:")
         print(population_copy)
+        self.assertTrue(np.allclose(population_copy[4, :], offspring[-1, :]))
+        self.assertTrue(np.allclose(population_copy[5, :], offspring[1, :]))
 
 if __name__ == '__main__':
 
