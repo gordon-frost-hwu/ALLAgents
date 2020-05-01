@@ -94,9 +94,23 @@ def update_population_using_elitism(population,
                                     parents, parents_fitness,
                                     children, children_fitness,
                                     minimise=True):
+    """
+    Update a given population with the provided children using the Elitism strategy. This replaces a parent
+    in the population only if a child's fitness is better. If none of the children's fitness are better then
+    the population remains the same
+    :param population: A numpy array representing the population, size: [pop_size, num_genes]
+    :param parents: A numpy array representing the parents that have been selected, size: [num_parents, num_genes]
+    :param parents_fitness: A numpy array representing the fitness of the parents, size: [num_parents, 1]
+    :param children: A numpy array representing the children that have been generated, size: [num_children, num_genes]
+    :param children_fitness: A numpy array representing the fitness of the children, size: [num_children, 1]
+    :param minimise: Boolean as to whether we are minimising or maximising the fitness values
+    :return: A Boolean indicating whether the population was updated,
+    i.e. whether any parents were replaced with children
+    """
     children_copy = deepcopy(children)
     children_fitness_copy = deepcopy(children_fitness)
     mask = numpy.ones(children_copy.shape[0], dtype=bool)
+    updated_population = False
     for parent, fitness_p in zip(parents, parents_fitness):
         best_child = None
         best_child_fitness = None
@@ -111,11 +125,13 @@ def update_population_using_elitism(population,
                 mask[idx] = False
             idx += 1
 
+        # If a child is determined to be better than parents, update it in the population
         if best_child is not None:
             row_index = get_row_index(population, parent)
             if row_index is not None:
                 population[row_index, :] = best_child
-    return True
+                updated_population = True
+    return updated_population
 
 
 def crossover(parents, offspring_size):
@@ -155,7 +171,15 @@ def mutation(offspring_crossover, num_mutations=1):
 
     return offspring_crossover
 
+
 def get_row_index(array, row):
+    """
+    Utility method to get the row index of a numpy array by matching a 1-Dim array to it.
+    Note, this is not very efficient so should not be used for large arrays
+    :param array: The numpy array to search in, size: [N, M]
+    :param row: The numpy array to search for, size: [M x 1]
+    :return: integer of the row index if the row is present in the array, else None
+    """
     for idx, _row in zip(range(array.shape[0]), array):
         if numpy.allclose(row, _row, atol=0.01):
             return idx
