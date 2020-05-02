@@ -1,6 +1,8 @@
 import numpy
 from copy import copy, deepcopy
 import pandas as pd
+import random
+
 
 def cal_pop_fitness(equation_inputs, pop):
     # Calculating the fitness value of each solution in the current population.
@@ -39,6 +41,7 @@ def select_mating_pool_tournament(pop, fitness, tour,
     :param tour: integer representing the number of solutions to randomly sample from the population
     :return:
     """
+    assert fitness.shape == (pop.shape[0], 1)
     entry_indices = generate_indices_randomly(pop.shape[0], tour)
     tournament_pop_entries = pop[entry_indices]
     tournament_fitness_entries = fitness[entry_indices]
@@ -134,7 +137,15 @@ def update_population_using_elitism(population,
     return updated_population
 
 
-def crossover(parents, offspring_size):
+def crossover_random_chromosones(parents):
+    assert parents.shape[0] == 2, "number of parents must be 2"
+    mask = numpy.array([bool(random.getrandbits(1)) for i in range(parents.shape[1])], dtype=bool)
+    child = parents[1, :].copy()
+    numpy.putmask(child, mask, parents[0, mask])
+    return child
+
+
+def crossover_at_centre(parents, offspring_size):
     offspring = numpy.empty(offspring_size)
     # The point at which crossover takes place between two parents. Usually, it is at the center.
     crossover_point = numpy.uint8(offspring_size[1]/2)
@@ -186,7 +197,7 @@ def get_row_index(array, row):
     return None
 
 
-def mutation_gaussian(offspring, mu, sigma, indpb):
+def mutation_gaussian(offspring, sigma, indpb, bounds, mu=0):
     """This function applies a gaussian mutation of mean *mu* and standard
     deviation *sigma* on the input individual. This mutation expects a
     :term:`sequence` individual composed of real valued attributes.
@@ -201,19 +212,27 @@ def mutation_gaussian(offspring, mu, sigma, indpb):
     This function uses the :func:`~random.random` and :func:`~random.gauss`
     functions from the python base :mod:`random` module.
     """
-    print("mutGaussian: offspring type: {0}".format(type(offspring)))
-    for individual in offspring:
+    def mutate(solution, mu, sigma, indpb, bounds):
+        size = len(solution)
 
-        size = len(individual)
-
+        if mu == 0:
+            mu = [0 for i in range(size)]
         if len(mu) < size:
             raise IndexError("mu must be at least the size of individual: %d < %d" % (len(mu), size))
         if len(sigma) < size:
             raise IndexError("sigma must be at least the size of individual: %d < %d" % (len(sigma), size))
+        assert bounds.shape == (size, 2)
 
-        for i, m, s in zip(range(size), mu, sigma):
-            if numpy.random.random() < indpb:
-                individual[i] = numpy.clip(individual[i] + numpy.random.normal(scale=s), 0, 50)
+        for i, m, s, p, (lower_bound, upper_bound) in zip(range(size), mu, sigma, indpb, bounds):
+            if numpy.random.random() < p:
+                solution[i] = numpy.clip(solution[i] + numpy.random.normal(scale=s), lower_bound, upper_bound)
+
+    # Handle array of offspring or a single row
+    if offspring.ndim == 2:
+        for individual in offspring:
+            mutate(individual, mu, sigma, indpb, bounds)
+    else:
+        mutate(offspring, mu, sigma, indpb, bounds)
 
     return offspring
 
