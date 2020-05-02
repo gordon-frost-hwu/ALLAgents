@@ -33,7 +33,7 @@ class GeneticAlgorithm(object):
                  crossover_probability=0.8,
                  mutation_probability=0.2,  # 0.05
                  elitism=True,
-                 maximise_fitness=True,
+                 minimise_fitness=True,
                  skip_known_solutions=False):
         __metaclass__ = abc.ABCMeta
 
@@ -52,7 +52,7 @@ class GeneticAlgorithm(object):
         self._crossover_probability = crossover_probability
         self._mutation_probability = mutation_probability
         self._elitism = elitism
-        self._maximise_fitness = maximise_fitness
+        self._minimise_fitness = minimise_fitness
         self._skip_known_solutions = skip_known_solutions
 
         self.results_dir = result_dir
@@ -88,11 +88,12 @@ class GeneticAlgorithm(object):
 
             fitness[solution_idx, 0] = solution_fitness
 
-        for generation_idx in range(self._max_generations):
+        generation_idx = 0
+        while generation_idx < self._max_generations:
             print("Population:\n{0}".format(population))
             print("Fitness:\n{0}".format(fitness))
             parents, parents_fitness = ga.select_mating_pool_tournament(population, fitness, 4,
-                                                                        minimise=self._maximise_fitness)
+                                                                        minimise=self._minimise_fitness)
             print("Parents:\n{0}".format(parents))
             child = ga.crossover_random_chromosones(parents)
             print("Child after crossover:\n{0}".format(child))
@@ -115,7 +116,8 @@ class GeneticAlgorithm(object):
             child_fitness = self.calculate_fitness(child)
             if ga.update_population_using_elitism(population, fitness,
                                                parents, parents_fitness,
-                                               child, child_fitness, minimise=self._maximise_fitness):
+                                               child, child_fitness, minimise=self._minimise_fitness):
+                generation_idx += 1
                 print("CHILD REPLACED PARENT")
             self.log_solution(1, child, child_fitness)
             self.log_best_in_generation(population, fitness)
@@ -123,7 +125,7 @@ class GeneticAlgorithm(object):
             print("")
 
     def log_best_in_generation(self, population, fitness):
-        best_idx = ga.get_n_best(fitness, 1, minimise=self._maximise_fitness)
+        best_idx = ga.get_n_best(fitness, 1, minimise=self._minimise_fitness)
         best_fitness, best_genes = fitness[best_idx][0][0], population[best_idx, :][0]
         log_entry_individual = '\t'.join(map(str, best_genes))
         log_entry = log_entry_individual + "\t" + str(best_fitness) + "\n"

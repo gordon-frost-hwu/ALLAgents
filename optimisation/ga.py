@@ -1,6 +1,5 @@
 import numpy
 from copy import copy, deepcopy
-import pandas as pd
 import random
 
 
@@ -244,6 +243,7 @@ def mutation_gaussian(offspring, sigma, indpb, bounds, mu=0):
     return offspring
 
 if __name__ == '__main__':
+    import pandas as pd
     # Test data
     individual_length = 4
     population_size = 8
