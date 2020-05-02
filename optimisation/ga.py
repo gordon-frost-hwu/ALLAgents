@@ -51,7 +51,8 @@ def select_mating_pool_tournament(pop, fitness, tour,
 
     best_idxs = get_n_best(tournament_fitness_entries, num_parents, minimise=minimise)
     parents = tournament_pop_entries[best_idxs]
-    return parents
+    parents_fitness = tournament_fitness_entries[best_idxs]
+    return parents, parents_fitness
 
 
 def generate_indices_randomly(array_size, num_indices):
@@ -93,7 +94,7 @@ def get_n_best(array, number_of_indices, minimise=True):
     return parents
 
 
-def update_population_using_elitism(population,
+def update_population_using_elitism(population, fitness,
                                     parents, parents_fitness,
                                     children, children_fitness,
                                     minimise=True):
@@ -110,8 +111,12 @@ def update_population_using_elitism(population,
     :return: A Boolean indicating whether the population was updated,
     i.e. whether any parents were replaced with children
     """
-    children_copy = deepcopy(children)
-    children_fitness_copy = deepcopy(children_fitness)
+    print(children.ndim)
+    children_copy = children.copy()
+    children_fitness_copy = children_fitness.copy()
+    if children_copy.ndim < 2 or children_fitness_copy.ndim < 2:
+        children_copy = children_copy.reshape((1, children.shape[0]))
+        children_fitness_copy = children_fitness_copy.reshape((1, 1))
     mask = numpy.ones(children_copy.shape[0], dtype=bool)
     updated_population = False
     for parent, fitness_p in zip(parents, parents_fitness):
@@ -133,6 +138,7 @@ def update_population_using_elitism(population,
             row_index = get_row_index(population, parent)
             if row_index is not None:
                 population[row_index, :] = best_child
+                fitness[row_index, :] = best_child_fitness
                 updated_population = True
     return updated_population
 
