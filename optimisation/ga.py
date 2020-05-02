@@ -111,7 +111,6 @@ def update_population_using_elitism(population, fitness,
     :return: A Boolean indicating whether the population was updated,
     i.e. whether any parents were replaced with children
     """
-    print(children.ndim)
     children_copy = children.copy()
     children_fitness_copy = children_fitness.copy()
     if children_copy.ndim < 2 or children_fitness_copy.ndim < 2:
@@ -125,7 +124,9 @@ def update_population_using_elitism(population, fitness,
         idx = 0
         for child, fitness_c in zip(children_copy[mask], children_fitness_copy[mask]):
             elitism_condition = fitness_c < fitness_p if minimise else fitness_c > fitness_p
-            child_better_condition = fitness_c < best_child_fitness if minimise else fitness_c > best_child_fitness
+            child_better_condition = False
+            if best_child_fitness is not None and best_child is not None:
+                child_better_condition = fitness_c < best_child_fitness if minimise else fitness_c > best_child_fitness
             if elitism_condition and best_child_fitness is None or child_better_condition:
                 best_child = child
                 best_child_fitness = fitness_c
