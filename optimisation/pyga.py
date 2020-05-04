@@ -1,29 +1,12 @@
 #! /usr/bin/python
 import numpy as np
 import abc
-import ga
-
-
-class SolutionDescription(object):
-    def __init__(self, num_genes, gene_bounds, gene_init_range,
-                 gene_sigma, gene_mut_probability):
-        # assert all(isinstance(elem, list) and len(elem) == 2 for elem in gene_bounds),
-        #               "gene_bounds must be a list of list"
-        assert gene_bounds.shape == (num_genes, 2), \
-            "gene_bounds must be numpy array of shape: ({0}, 2)".format(num_genes)
-        assert gene_init_range.shape == (num_genes, 2), \
-            "gene_init_range must be numpy array of shape: ({0}, 2)".format(num_genes)
-        assert gene_sigma.shape == (num_genes, ), \
-            "gene_sigma must be numpy array of shape: ({0}, )".format(num_genes)
-        assert gene_mut_probability.shape == (num_genes, ), \
-            "gene_mut_probability must be numpy array of shape: ({0}, )".format(num_genes)
-
-        self.num_genes = num_genes
-        self.gene_bounds = gene_bounds
-        self.gene_init_range = gene_init_range
-        # TODO - compute the signma from bounds?
-        self.gene_sigma = gene_sigma
-        self.gene_mutation_prob = gene_mut_probability
+print(__name__)
+print(__package__)
+if __name__ != '__main__':
+    from .ga import ga
+else:
+    from ga import ga
 
 
 class GeneticAlgorithm(object):
@@ -152,6 +135,8 @@ class GeneticAlgorithm(object):
 
 
 if __name__ == '__main__':
+    from solution_description import SolutionDescription
+
     num_genes = 2
     gene_bounds = np.array([[0, 10] for gene in range(num_genes)])
     gene_init_range = np.array([[0, 10] for gene in range(num_genes)])
