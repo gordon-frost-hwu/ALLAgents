@@ -2,7 +2,7 @@
 
 import numpy as np
 import pandas as pd
-import ga
+from ga import ga
 import unittest
 from copy import deepcopy
 
@@ -76,9 +76,11 @@ class GaUnitTests(unittest.TestCase):
         fitness_copy = deepcopy(self.fitness)
         print("Population before elitism update:")
         print(population_copy)
+        atol = np.array([0.01 for gene in range(4)])
         ga.update_population_using_elitism(population_copy, fitness_copy,
                                            parents, parents_fitness,
-                                           offspring, offspring_fitness)
+                                           offspring, offspring_fitness,
+                                           atol)
         print("Population after elitism update:")
         print(population_copy)
         # Assert that the population gets updated correctly
