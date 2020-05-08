@@ -96,6 +96,7 @@ def get_n_best(array, number_of_indices, minimise=True):
 def update_population_using_elitism(population, fitness,
                                     parents, parents_fitness,
                                     children, children_fitness,
+                                    atol,
                                     minimise=True):
     """
     Update a given population with the provided children using the Elitism strategy. This replaces a parent
@@ -106,6 +107,7 @@ def update_population_using_elitism(population, fitness,
     :param parents_fitness: A numpy array representing the fitness of the parents, size: [num_parents, 1]
     :param children: A numpy array representing the children that have been generated, size: [num_children, num_genes]
     :param children_fitness: A numpy array representing the fitness of the children, size: [num_children, 1]
+    :param atol: A numpy array that indicates the absolute tolerance for each gene, of size: [M x 1], that a match must lie within
     :param minimise: Boolean as to whether we are minimising or maximising the fitness values
     :return: A Boolean indicating whether the population was updated,
     i.e. whether any parents were replaced with children
@@ -126,7 +128,7 @@ def update_population_using_elitism(population, fitness,
             child_better_condition = False
             if best_child_fitness is not None and best_child is not None:
                 child_better_condition = fitness_c < best_child_fitness if minimise else fitness_c > best_child_fitness
-            if elitism_condition and best_child_fitness is None or child_better_condition:
+            if elitism_condition and (best_child_fitness is None or child_better_condition):
                 best_child = child
                 best_child_fitness = fitness_c
                 # Hide the best child that has already been used
@@ -135,7 +137,7 @@ def update_population_using_elitism(population, fitness,
 
         # If a child is determined to be better than parents, update it in the population
         if best_child is not None:
-            row_index = get_row_index(population, parent)
+            row_index = get_row_index(population, parent, atol)
             if row_index is not None:
                 population[row_index, :] = best_child
                 fitness[row_index, :] = best_child_fitness
@@ -189,16 +191,20 @@ def mutation(offspring_crossover, num_mutations=1):
     return offspring_crossover
 
 
-def get_row_index(array, row):
+def get_row_index(array, row, atol):
     """
     Utility method to get the row index of a numpy array by matching a 1-Dim array to it.
     Note, this is not very efficient so should not be used for large arrays
     :param array: The numpy array to search in, size: [N, M]
     :param row: The numpy array to search for, size: [M x 1]
+    :param atol: A numpy array that indicates the absolute tolerance for each gene, of size: [M x 1], that a match must lie within
     :return: integer of the row index if the row is present in the array, else None
     """
+    if type(atol) is list or type(atol) is numpy.ndarray:
+        assert len(atol) == len(row), "Absolute tolerance must either be an int, float, or array of the same" \
+                                      "length as is being compared"
     for idx, _row in zip(range(array.shape[0]), array):
-        if numpy.allclose(row, _row, atol=0.01):
+        if numpy.all(abs(array[idx, :] - row) < atol):
             return idx
     return None
 
@@ -239,6 +245,35 @@ def mutation_gaussian(offspring, sigma, indpb, bounds, mu=0):
             mutate(individual, mu, sigma, indpb, bounds)
     else:
         mutate(offspring, mu, sigma, indpb, bounds)
+
+    return offspring
+
+
+def mutation_linear(offspring, indpb, bounds):
+    """This function applies a random linear mutation on the input individual. This mutation expects a
+    :term:`sequence` individual composed of real valued attributes.
+    The *indpb* argument is the probability of each attribute to be mutated.
+    :param individual: Individual to be mutated.
+    :param indpb: Independent probability for each attribute to be mutated.
+    :returns: A tuple of one individual.
+    This function uses the :func:`~random.random` and :func:`~random.gauss`
+    functions from the python base :mod:`random` module.
+    """
+    def mutate(solution, indpb, bounds):
+        size = len(solution)
+
+        assert bounds.shape == (size, 2)
+        gene_idx_to_mutate = numpy.random.randint(low=0, high=size)
+        if numpy.random.random() < indpb[gene_idx_to_mutate]:
+            lower_bound, upper_bound = bounds[gene_idx_to_mutate]
+            solution[gene_idx_to_mutate] = numpy.random.uniform(low=lower_bound, high=upper_bound)
+
+    # Handle array of offspring or a single row
+    if offspring.ndim == 2:
+        for individual in offspring:
+            mutate(individual, indpb, bounds)
+    else:
+        mutate(offspring, indpb, bounds)
 
     return offspring
 
