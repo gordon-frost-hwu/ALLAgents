@@ -1,7 +1,7 @@
 import numpy
 from copy import copy, deepcopy
 import random
-
+from math import log10
 
 def cal_pop_fitness(equation_inputs, pop):
     # Calculating the fitness value of each solution in the current population.
@@ -266,7 +266,11 @@ def mutation_linear(offspring, indpb, bounds):
         gene_idx_to_mutate = numpy.random.randint(low=0, high=size)
         if numpy.random.random() < indpb[gene_idx_to_mutate]:
             lower_bound, upper_bound = bounds[gene_idx_to_mutate]
-            solution[gene_idx_to_mutate] = numpy.random.uniform(low=lower_bound, high=upper_bound)
+            log_lb, log_up = -log10(lower_bound), -log10(upper_bound)
+            solution[gene_idx_to_mutate] = 10 ** (-1.0 * numpy.random.uniform(low=log_lb, high=log_up))
+            # solution[gene_idx_to_mutate] = numpy.random.uniform(low=lower_bound, high=upper_bound)
+            # solution[gene_idx_to_mutate] = numpy.clip(solution[gene_idx_to_mutate] +
+            # numpy.random.normal(scale=0.1), lower_bound, upper_bound)
 
     # Handle array of offspring or a single row
     if offspring.ndim == 2:

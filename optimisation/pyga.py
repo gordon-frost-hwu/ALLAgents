@@ -1,11 +1,16 @@
 #! /usr/bin/python
 import numpy as np
 import abc
+from math import log10
 
 if __name__ != '__main__':
     from .ga import ga
 else:
     from ga import ga
+
+
+def is_close(array1, array2, atol):
+    return np.all(abs(array1 - array2) < atol)
 
 
 class GeneticAlgorithm(object):
@@ -41,16 +46,27 @@ class GeneticAlgorithm(object):
 
         self.solution_lookup = {}
 
+        # TODO - add file that is the "live" population
         self.f_evolution_history = open("{0}{1}".format(self.results_dir, "/evolution_history.csv"), "w", 1)
         self.f_generation_max = open("{0}{1}".format(self.results_dir, "/generation_history.csv"), "w", 1)
 
+    # def seed_population(self):
+    #     population = None
+    #     for gene_idx, (lower_bound, upper_bound) in zip(range(self.solution_description.num_genes),
+    #                                                     self.solution_description.gene_init_range):
+    #         gene_weights = np.random.uniform(low=lower_bound, high=upper_bound, size=(self._population_size, 1))
+    #         population = np.concatenate((population, gene_weights), axis=1) if population is not None else gene_weights
+    #
+    #     return population
+
     def seed_population(self):
         population = None
-        for gene_idx, (lower_bound, upper_bound) in zip(range(self.solution_description.num_genes),
-                                                        self.solution_description.gene_init_range):
-            gene_weights = np.random.uniform(low=lower_bound, high=upper_bound, size=(self._population_size, 1))
-            population = np.concatenate((population, gene_weights), axis=1) if population is not None else gene_weights
+        num_genes = 2
 
+        for gene_idx, (lower_bound, upper_bound) in zip(range(num_genes), self.solution_description.gene_init_range):
+            # gene_weights = 10 ** (-1 * np.random.uniform(low=-log10(lower_bound), high=-log10(upper_bound), size=(8, 1)))
+            gene_weights = np.random.uniform(low=lower_bound, high=upper_bound, size=(8, 1))
+            population = np.concatenate((population, gene_weights), axis=1) if population is not None else gene_weights
         return population
 
     @abc.abstractmethod
@@ -60,8 +76,8 @@ class GeneticAlgorithm(object):
         :param solution:
         :return:
         """
-        # return abs((solution[0] - 1e-4)) + abs(solution[1] - 1e-5)
-        return abs(((2*solution[0]**2) + solution[1]) - 57)
+        return abs((solution[0] - 1e-4)) + abs(solution[1] - 1e-5)
+        # return abs(((2*solution[0]**2) + solution[1]) - 57)
 
     def run(self):
         population = self.seed_population()
@@ -82,6 +98,8 @@ class GeneticAlgorithm(object):
             parents, parents_fitness = ga.select_mating_pool_tournament(population, fitness, 4,
                                                                         minimise=self._minimise_fitness)
             # TODO - check if parents are same
+            if is_close(parents[0, :], parents[1, :], self.solution_description.atol):
+                pass
             print("Parents:\n{0}".format(parents))
             child = ga.crossover_random_chromosones(parents)
             print("Child after crossover:\n{0}".format(child))
@@ -137,9 +155,7 @@ class GeneticAlgorithm(object):
     def check_for_past_result(self, individual):
         closest = None
         for key in self.solution_lookup.keys():
-            diff = np.array(key) - np.array(individual)
-            # match = all(abs(d) < tolerance for d in diff)
-            match = np.all(abs(diff) < self.solution_description.atol)
+            match = is_close(np.array(key), np.array(individual), self.solution_description.atol)
             if match:
                 print("Individual {0} matched with {1}".format(individual, key))
                 closest = key
@@ -150,18 +166,18 @@ if __name__ == '__main__':
     from solution_description import SolutionDescription
 
     num_genes = 2
-    gene_bounds = np.array([[0, 10] for gene in range(num_genes)])
-    gene_init_range = np.array([[0, 10] for gene in range(num_genes)])
-    gene_sigma = np.array([0.5 for gene in range(num_genes)])
-    gene_mutation_probability = np.array([0.2 for gene in range(num_genes)])
-    atol = np.array([0.01 for gene in range(num_genes)])
-
-
-    # gene_bounds = np.array([[1e-6, 1e-1] for gene in range(num_genes)])
-    # gene_init_range = np.array([[1e-6, 1e-1] for gene in range(num_genes)])
-    # gene_sigma = np.array([0.1 for gene in range(num_genes)])
+    # gene_bounds = np.array([[0, 10] for gene in range(num_genes)])
+    # gene_init_range = np.array([[0, 10] for gene in range(num_genes)])
+    # gene_sigma = np.array([0.5 for gene in range(num_genes)])
     # gene_mutation_probability = np.array([0.2 for gene in range(num_genes)])
-    # atol = np.array([1e-6 for gene in range(num_genes)])
+    # atol = np.array([0.01 for gene in range(num_genes)])
+
+
+    gene_bounds = np.array([[1e-6, 1e-1] for gene in range(num_genes)])
+    gene_init_range = np.array([[1e-6, 1e-1] for gene in range(num_genes)])
+    gene_sigma = np.array([0.1 for gene in range(num_genes)])
+    gene_mutation_probability = np.array([0.2 for gene in range(num_genes)])
+    atol = np.array([1e-6 for gene in range(num_genes)])
 
     solution_description = SolutionDescription(num_genes, gene_bounds,
                                                gene_init_range, gene_sigma,
