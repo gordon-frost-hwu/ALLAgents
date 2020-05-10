@@ -7,7 +7,7 @@ if __name__ != '__main__':
     from .ga import ga
 else:
     from ga import ga
-
+import pandas as pd
 
 def is_close(array1, array2, atol):
     return np.all(abs(array1 - array2) < atol)
@@ -49,6 +49,7 @@ class GeneticAlgorithm(object):
         # TODO - add file that is the "live" population
         self.f_evolution_history = open("{0}{1}".format(self.results_dir, "/evolution_history.csv"), "w", 1)
         self.f_generation_max = open("{0}{1}".format(self.results_dir, "/generation_history.csv"), "w", 1)
+        self.f_population_history = open("{0}{1}".format(self.results_dir, "/population_history.csv"), "w", 1)
 
     # def seed_population(self):
     #     population = None
@@ -79,6 +80,20 @@ class GeneticAlgorithm(object):
         return abs((solution[0] - 1e-4)) + abs(solution[1] - 1e-5)
         # return abs(((2*solution[0]**2) + solution[1]) - 57)
 
+    def update_population_logs(self, generation_id, population, fitness):
+
+        # Overwrite the "live" population file
+        df = pd.DataFrame(population)
+        df[population.shape[1]] = fitness
+        df.to_csv("{0}{1}".format(self.results_dir, "/population.csv"), sep="\t", header=False)
+
+
+        # Append the population to the population history log
+        self.f_population_history.write("====== {0} ======\n".format(generation_id))
+        self.f_population_history.write(df.to_string(header=False))
+        self.f_population_history.write("\n")
+
+
     def run(self):
         population = self.seed_population()
         print("Initial population:")
@@ -92,6 +107,9 @@ class GeneticAlgorithm(object):
             fitness[solution_idx, 0] = solution_fitness
 
         generation_idx = 0
+
+        self.update_population_logs(generation_idx, population, fitness)
+
         while generation_idx < self._max_generations:
             print("Population:\n{0}".format(population))
             print("Fitness:\n{0}".format(fitness))
@@ -129,6 +147,7 @@ class GeneticAlgorithm(object):
                                                       child, child_fitness,
                                                       self.solution_description.atol,
                                                       minimise=self._minimise_fitness):
+                    self.update_population_logs(generation_idx, population, fitness)
                     generation_idx += 1
                     print("CHILD REPLACED PARENT")
 
