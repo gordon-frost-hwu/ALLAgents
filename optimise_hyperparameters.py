@@ -9,6 +9,7 @@ from optimisation.solution_description import SolutionDescription
 import presets
 import random
 import numpy as np
+from copy import copy
 
 class OptimisePreset(object):
     def __init__(self, args, write_loss=False):
@@ -27,6 +28,7 @@ class OptimisePreset(object):
 
         self.ind_lookup = {}
         self.individual_id = 0
+        self.run_count = 0
 
         num_generations = 80
         num_genes = 2
@@ -35,6 +37,8 @@ class OptimisePreset(object):
         gene_sigma = np.array([0.1 for gene in range(num_genes)])
         gene_mutation_probability = np.array([0.2 for gene in range(num_genes)])
         atol = np.array([1e-6 for gene in range(num_genes)])
+
+        self.f_fitness_run_map = open("{0}{1}".format(self.result_dir, "/fitness_to_run_map.csv"), "w", 1)
 
         # gene_bounds = np.array([[0, 10] for gene in range(num_genes)])
         # gene_init_range = np.array([[0, 10] for gene in range(num_genes)])
@@ -73,6 +77,7 @@ class OptimisePreset(object):
         returns = []
         # TODO - average past fitness values
         # TODO - loop env
+        run_idxs = []
         for i in range(2):
             # create the environment and agent
             env = GymEnvironment(self.args.env, device=self.args.device)
@@ -91,8 +96,13 @@ class OptimisePreset(object):
             solved_return_value = np.array([100.0 for x in range(len(episodes_returns))])
             fitness = sum(abs(solved_return_value - episodes_returns))
             returns.append(fitness)
+            run_idxs.append(copy(self.run_count))
+            self.run_count += 1
         print("runs fitnesses: {0}".format(returns))
         avg_fitness = sum(returns) / len(returns)
+
+        for idx in run_idxs:
+            self.f_fitness_run_map.write("{0}\t{1}\t{2}".format(self.individual_id, idx, avg_fitness))
 
         self.individual_id += 1
         return avg_fitness

@@ -87,7 +87,6 @@ class GeneticAlgorithm(object):
         df[population.shape[1]] = fitness
         df.to_csv("{0}{1}".format(self.results_dir, "/population.csv"), sep="\t", header=False)
 
-
         # Append the population to the population history log
         self.f_population_history.write("====== {0} ======\n".format(generation_id))
         self.f_population_history.write(df.to_string(header=False))
