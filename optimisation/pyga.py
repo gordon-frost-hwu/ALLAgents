@@ -45,6 +45,7 @@ class GeneticAlgorithm(object):
         self.results_dir = result_dir
 
         self.solution_lookup = {}
+        self.solution_idx = 0
 
         # TODO - add file that is the "live" population
         self.f_evolution_history = open("{0}{1}".format(self.results_dir, "/evolution_history.csv"), "w", 1)
@@ -66,7 +67,7 @@ class GeneticAlgorithm(object):
 
         for gene_idx, (lower_bound, upper_bound) in zip(range(num_genes), self.solution_description.gene_init_range):
             # gene_weights = 10 ** (-1 * np.random.uniform(low=-log10(lower_bound), high=-log10(upper_bound), size=(8, 1)))
-            gene_weights = np.random.uniform(low=lower_bound, high=upper_bound, size=(8, 1))
+            gene_weights = np.random.uniform(low=lower_bound, high=upper_bound, size=(self._population_size, 1))
             population = np.concatenate((population, gene_weights), axis=1) if population is not None else gene_weights
         return population
 
@@ -81,10 +82,10 @@ class GeneticAlgorithm(object):
         # return abs(((2*solution[0]**2) + solution[1]) - 57)
 
     def update_population_logs(self, generation_id, population, fitness):
-
         # Overwrite the "live" population file
         df = pd.DataFrame(population)
-        df[population.shape[1]] = fitness
+        idx = population.shape[1]
+        df[idx] = fitness
         df.to_csv("{0}{1}".format(self.results_dir, "/population.csv"), sep="\t", header=False)
 
         # Append the population to the population history log
@@ -104,6 +105,7 @@ class GeneticAlgorithm(object):
             self.log_solution(1, solution, solution_fitness)
 
             fitness[solution_idx, 0] = solution_fitness
+            self.solution_idx += 1
 
         generation_idx = 0
 
@@ -149,23 +151,24 @@ class GeneticAlgorithm(object):
                     self.update_population_logs(generation_idx, population, fitness)
                     generation_idx += 1
                     print("CHILD REPLACED PARENT")
+                self.solution_idx += 1
 
             self.log_solution(call_fitness_function, child, child_fitness)
-            self.log_best_in_generation(population, fitness)
+            self.log_best_in_generation(generation_idx, population, fitness)
 
             print("")
 
-    def log_best_in_generation(self, population, fitness):
+    def log_best_in_generation(self, generation_idx, population, fitness):
         best_idx = ga.get_n_best(fitness, 1, minimise=self._minimise_fitness)
         best_fitness, best_solution = fitness[best_idx][0][0], population[best_idx, :][0]
         log_entry_individual = '\t'.join(map(str, best_solution))
-        log_entry = log_entry_individual + "\t" + str(best_fitness) + "\n"
+        log_entry = str(generation_idx) + "\t" + log_entry_individual + "\t" + str(best_fitness) + "\n"
         self.f_generation_max.write(log_entry)
         self.f_generation_max.flush()
 
     def log_solution(self, executed, solution, fitness):
         log_entry_individual = '\t'.join(map(str, solution))
-        log_entry = str(int(executed)) + "\t" + log_entry_individual + "\t" + str(fitness) + "\n"
+        log_entry = str(self.solution_idx) + "\t" + str(int(executed)) + "\t" + log_entry_individual + "\t" + str(fitness) + "\n"
         self.f_evolution_history.write(log_entry)
         self.solution_lookup[tuple(solution)] = fitness
         self.f_evolution_history.flush()

@@ -28,7 +28,7 @@ class OptimisePreset(object):
 
         self.ind_lookup = {}
         self.individual_id = 0
-        self.run_count = 0
+        self.run_count = 1
 
         num_generations = 80
         num_genes = 2
@@ -38,7 +38,7 @@ class OptimisePreset(object):
         gene_mutation_probability = np.array([0.2 for gene in range(num_genes)])
         atol = np.array([1e-6 for gene in range(num_genes)])
 
-        self.f_fitness_run_map = open("{0}{1}".format(self.result_dir, "/fitness_to_run_map.csv"), "w", 1)
+        self.f_fitness_run_map = open("{0}{1}".format(self.result_dir, "/fitness_map.csv"), "w", 1)
 
         # gene_bounds = np.array([[0, 10] for gene in range(num_genes)])
         # gene_init_range = np.array([[0, 10] for gene in range(num_genes)])
@@ -102,7 +102,8 @@ class OptimisePreset(object):
         avg_fitness = sum(returns) / len(returns)
 
         for idx in run_idxs:
-            self.f_fitness_run_map.write("{0}\t{1}\t{2}".format(self.individual_id, idx, avg_fitness))
+            self.f_fitness_run_map.write("{0}\t{1}\t{2}\n".format(self.individual_id, idx, avg_fitness))
+            self.f_fitness_run_map.flush()
 
         self.individual_id += 1
         return avg_fitness
