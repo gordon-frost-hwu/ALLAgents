@@ -12,8 +12,8 @@ def cacla(
         device="cpu",
         discount_factor=0.99,
         # Adam optimizer settings
-        lr_v=1e-3,
-        lr_pi=1e-4,
+        lr_v=0.0008705414196327932,
+        lr_pi=0.0018325995741864057,
         eps=0.01,   # from https://medium.com/autonomous-learning-library/radam-a-new-state-of-the-art-optimizer-for-rl-442c1e830564
         # Replay buffer settings
         replay_buffer_size=4000,
