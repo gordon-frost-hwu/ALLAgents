@@ -14,6 +14,7 @@ def tocla(
         # Adam optimizer settings
         lr_v=0.00011417943304348878,
         lr_pi=0.0005984818889217654,
+        trace_decay=0.9,
         eps=0.01,   # from https://medium.com/autonomous-learning-library/radam-a-new-state-of-the-art-optimizer-for-rl-442c1e830564
         # Replay buffer settings
         replay_buffer_size=4000,
@@ -58,7 +59,7 @@ def tocla(
 
 
         # TODO - reintroduce TimeFeature wrapper
-        return TOCLA(v, policy, replay_buffer, env.action_space, writer=writer, discount_factor=discount_factor)
+        return TOCLA(v, policy, replay_buffer, env.action_space, trace_decay=trace_decay, writer=writer, discount_factor=discount_factor)
     return _tocla
 
 __all__ = ["tocla"]

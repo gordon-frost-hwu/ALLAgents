@@ -170,25 +170,50 @@ def crossover_at_centre(parents, offspring_size):
     return offspring
 
 
-def mutation(offspring_crossover, num_mutations=1):
-    print("MUTATION FUNC - START")
-    print("offspring_crossover shape: {0}".format(offspring_crossover.shape))
-    mutations_counter = numpy.uint8(offspring_crossover.shape[1] / num_mutations)
-    print("mutations_counter: {0}".format(mutations_counter))
+# def mutation(offspring_crossover, num_mutations=1):
+#     print("MUTATION FUNC - START")
+#     print("offspring_crossover shape: {0}".format(offspring_crossover.shape))
+#     mutations_counter = numpy.uint8(offspring_crossover.shape[1] / num_mutations)
+#     print("mutations_counter: {0}".format(mutations_counter))
+#
+#     # Mutation changes a number of genes as defined by the num_mutations argument. The changes are random.
+#     for idx in range(offspring_crossover.shape[0]):
+#         gene_idx = mutations_counter - 1
+#         for mutation_num in range(num_mutations):
+#             # The random value to be added to the gene.
+#             random_value = numpy.random.normal(scale=0.3)   # numpy.random.uniform(-1.0, 1.0, 1)
+#             print("mutating index: {0} {1}".format(idx, gene_idx))
+#             offspring_crossover[idx, gene_idx] = numpy.clip(offspring_crossover[idx, gene_idx] + random_value, 0, 5)
+#             gene_idx = gene_idx + mutations_counter
+#
+#     print("MUTATION FUNC - End")
+#
+#     return offspring_crossover
 
-    # Mutation changes a number of genes as defined by the num_mutations argument. The changes are random.
-    for idx in range(offspring_crossover.shape[0]):
-        gene_idx = mutations_counter - 1
-        for mutation_num in range(num_mutations):
-            # The random value to be added to the gene.
-            random_value = numpy.random.normal(scale=0.3)   # numpy.random.uniform(-1.0, 1.0, 1)
-            print("mutating index: {0} {1}".format(idx, gene_idx))
-            offspring_crossover[idx, gene_idx] = numpy.clip(offspring_crossover[idx, gene_idx] + random_value, 0, 5)
-            gene_idx = gene_idx + mutations_counter
+def mutation(offspring, solution_description):
+    gene_idx = numpy.random.randint(low=0, high=solution_description.num_genes)
+    key = solution_description.gene_mutation_type[gene_idx]
+    print("gene_idx: {0} has Key: {1}".format(gene_idx, key))
 
-    print("MUTATION FUNC - End")
+    # switcher = {
+    #     "linear": mutate_linear(offspring, gene_idx, solution_description.gene_bounds[gene_idx]),
+    #     "log": mutate_log(offspring, gene_idx, solution_description.gene_bounds[gene_idx]),
+    #     "gaussian": mutate_gaussian(offspring, gene_idx,
+    #                                 solution_description.gene_sigma[gene_idx],
+    #                                 solution_description.gene_bounds[gene_idx])
+    # }
+    if key == "linear":
+        mutate_linear(offspring, gene_idx, solution_description.gene_bounds[gene_idx])
 
-    return offspring_crossover
+    if key == "log":
+        mutate_log(offspring, gene_idx, solution_description.gene_bounds[gene_idx])
+
+    if key == "gaussian":
+        mutate_gaussian(offspring, gene_idx,
+                                    solution_description.gene_sigma[gene_idx],
+                                    solution_description.gene_bounds[gene_idx])
+
+    return offspring
 
 
 def get_row_index(array, row, atol):
@@ -209,47 +234,51 @@ def get_row_index(array, row, atol):
     return None
 
 
-def mutation_gaussian(offspring, sigma, indpb, bounds, mu=0):
+def mutate_gaussian(solution, gene_idx_to_mutate, sigma, bounds):
     """This function applies a gaussian mutation of mean *mu* and standard
-    deviation *sigma* on the input individual. This mutation expects a
-    :term:`sequence` individual composed of real valued attributes.
-    The *indpb* argument is the probability of each attribute to be mutated.
-    :param individual: Individual to be mutated.
-    :param mu: Mean or :term:`python:sequence` of means for the
-               gaussian addition mutation.
-    :param sigma: Standard deviation or :term:`python:sequence` of
-                  standard deviations for the gaussian addition mutation.
-    :param indpb: Independent probability for each attribute to be mutated.
-    :returns: A tuple of one individual.
-    This function uses the :func:`~random.random` and :func:`~random.gauss`
-    functions from the python base :mod:`random` module.
-    """
-    def mutate(solution, mu, sigma, indpb, bounds):
-        size = len(solution)
+        deviation *sigma* on the input individual. This mutation expects a
+        :term:`sequence` individual composed of real valued attributes.
+        The *indpb* argument is the probability of each attribute to be mutated.
+        :param individual: Individual to be mutated.
+        :param mu: Mean or :term:`python:sequence` of means for the
+                   gaussian addition mutation.
+        :param sigma: Standard deviation or :term:`python:sequence` of
+                      standard deviations for the gaussian addition mutation.
+        :param indpb: Independent probability for each attribute to be mutated.
+        :returns: A tuple of one individual.
+        This function uses the :func:`~random.random` and :func:`~random.gauss`
+        functions from the python base :mod:`random` module.
+        """
+    lower_bound, upper_bound = bounds[0], bounds[1]
+    solution[gene_idx_to_mutate] = numpy.clip(solution[gene_idx_to_mutate] +
+                                              numpy.random.normal(scale=sigma), lower_bound, upper_bound)
 
-        if mu == 0:
-            mu = [0 for i in range(size)]
-        if len(mu) < size:
-            raise IndexError("mu must be at least the size of individual: %d < %d" % (len(mu), size))
-        if len(sigma) < size:
-            raise IndexError("sigma must be at least the size of individual: %d < %d" % (len(sigma), size))
-        assert bounds.shape == (size, 2)
 
-        for i, m, s, p, (lower_bound, upper_bound) in zip(range(size), mu, sigma, indpb, bounds):
-            if numpy.random.random() < p:
-                solution[i] = numpy.clip(solution[i] + numpy.random.normal(scale=s), lower_bound, upper_bound)
-
+def mutation_gaussian(offspring, solution_description):
     # Handle array of offspring or a single row
     if offspring.ndim == 2:
         for individual in offspring:
-            mutate(individual, mu, sigma, indpb, bounds)
+            gene_idx = numpy.random.randint(low=0, high=solution_description.num_genes)
+            sigma = solution_description.gene_sigma[gene_idx]
+            gene_bounds = solution_description.gene_bounds[gene_idx]
+            mutate_gaussian(individual, gene_idx, sigma, gene_bounds)
     else:
-        mutate(offspring, mu, sigma, indpb, bounds)
+        gene_idx = numpy.random.randint(low=0, high=solution_description.num_genes)
+        sigma = solution_description.gene_sigma[gene_idx]
+        gene_bounds = solution_description.gene_bounds[gene_idx]
+        mutate_gaussian(offspring, gene_idx, sigma, gene_bounds)
 
     return offspring
 
 
-def mutation_linear(offspring, indpb, bounds):
+def mutate_log(solution, gene_idx_to_mutate, bounds):
+    assert bounds.shape == (2, )
+    lower_bound, upper_bound = bounds
+    log_lo, log_up = -log10(lower_bound), -log10(upper_bound)
+    solution[gene_idx_to_mutate] = 10 ** (-1.0 * numpy.random.uniform(low=log_lo, high=log_up))
+
+
+def mutation_log(offspring, bounds):
     """This function applies a random linear mutation on the input individual. This mutation expects a
     :term:`sequence` individual composed of real valued attributes.
     The *indpb* argument is the probability of each attribute to be mutated.
@@ -259,27 +288,55 @@ def mutation_linear(offspring, indpb, bounds):
     This function uses the :func:`~random.random` and :func:`~random.gauss`
     functions from the python base :mod:`random` module.
     """
-    def mutate(solution, indpb, bounds):
-        size = len(solution)
-
-        assert bounds.shape == (size, 2)
-        gene_idx_to_mutate = numpy.random.randint(low=0, high=size)
-        if numpy.random.random() < indpb[gene_idx_to_mutate]:
-            lower_bound, upper_bound = bounds[gene_idx_to_mutate]
-            log_lb, log_up = -log10(lower_bound), -log10(upper_bound)
-            solution[gene_idx_to_mutate] = 10 ** (-1.0 * numpy.random.uniform(low=log_lb, high=log_up))
-            # solution[gene_idx_to_mutate] = numpy.random.uniform(low=lower_bound, high=upper_bound)
-            # solution[gene_idx_to_mutate] = numpy.clip(solution[gene_idx_to_mutate] +
-            # numpy.random.normal(scale=0.1), lower_bound, upper_bound)
-
     # Handle array of offspring or a single row
     if offspring.ndim == 2:
         for individual in offspring:
-            mutate(individual, indpb, bounds)
+            gene_idx = numpy.random.randint(low=0, high=individual.shape[1])
+            mutate_log(individual, gene_idx, bounds)
     else:
-        mutate(offspring, indpb, bounds)
+        gene_idx = numpy.random.randint(low=0, high=offspring.shape[1])
+        mutate_log(offspring, gene_idx, bounds)
 
     return offspring
+
+
+def mutate_linear(solution, gene_idx_to_mutate, bounds):
+    """
+    This function applies a random linear mutation on the input individual. This mutation expects a
+    :term:`sequence` individual composed of real valued attributes.
+    The *indpb* argument is the probability of each attribute to be mutated.
+    :param individual: Individual to be mutated.
+    :param indpb: Independent probability for each attribute to be mutated.
+    :returns: A tuple of one individual.
+    This function uses the :func:`~random.random` and :func:`~random.gauss`
+    functions from the python base :mod:`random` module.
+    """
+    assert bounds.shape == (2,)
+    lower_bound, upper_bound = bounds
+    solution[gene_idx_to_mutate] = numpy.random.uniform(low=lower_bound, high=upper_bound)
+
+
+def mutation_linear(offspring, bounds):
+    """This function applies a random linear mutation on the input individual. This mutation expects a
+    :term:`sequence` individual composed of real valued attributes.
+    The *indpb* argument is the probability of each attribute to be mutated.
+    :param individual: Individual to be mutated.
+    :param indpb: Independent probability for each attribute to be mutated.
+    :returns: A tuple of one individual.
+    This function uses the :func:`~random.random` and :func:`~random.gauss`
+    functions from the python base :mod:`random` module.
+    """
+    # Handle array of offspring or a single row
+    if offspring.ndim == 2:
+        for individual in offspring:
+            gene_idx = numpy.random.randint(low=0, high=individual.shape[1])
+            mutate_linear(individual, gene_idx, bounds)
+    else:
+        gene_idx = numpy.random.randint(low=0, high=offspring.shape[1])
+        mutate_linear(offspring, gene_idx, bounds)
+
+    return offspring
+
 
 if __name__ == '__main__':
     import pandas as pd

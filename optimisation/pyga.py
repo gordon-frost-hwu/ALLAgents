@@ -63,9 +63,8 @@ class GeneticAlgorithm(object):
 
     def seed_population(self):
         population = None
-        num_genes = 2
-
-        for gene_idx, (lower_bound, upper_bound) in zip(range(num_genes), self.solution_description.gene_init_range):
+        for gene_idx, (lower_bound, upper_bound) in zip(range(self.solution_description.num_genes),
+                                                        self.solution_description.gene_init_range):
             # gene_weights = 10 ** (-1 * np.random.uniform(low=-log10(lower_bound), high=-log10(upper_bound), size=(8, 1)))
             gene_weights = np.random.uniform(low=lower_bound, high=upper_bound, size=(self._population_size, 1))
             population = np.concatenate((population, gene_weights), axis=1) if population is not None else gene_weights
@@ -125,8 +124,7 @@ class GeneticAlgorithm(object):
             # child = ga.mutation_gaussian(child, self.solution_description.gene_sigma,
             #                              self.solution_description.gene_mutation_prob,
             #                              self.solution_description.gene_bounds)
-            child = ga.mutation_linear(child, self.solution_description.gene_mutation_prob,
-                                         self.solution_description.gene_bounds)
+            child = ga.mutation(child, self.solution_description)
             print("Child after mutation:\n{0}".format(child))
 
             call_fitness_function = True
