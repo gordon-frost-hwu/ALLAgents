@@ -58,7 +58,7 @@ class GaUnitTests(unittest.TestCase):
         self.generate_test_data()
         parents = np.array([[-0.64454314,  0.63685633,  0.7274629 , -1.15782712],
                             [-0.5904881 , -1.4635747 , -1.74232884, -2.23014166]])
-        indexes_of_parents = [ga.get_row_index(self.population, i) for i in parents]
+        indexes_of_parents = [ga.get_row_index(self.population, i, 0.0001) for i in parents]
         self.assertTrue(indexes_of_parents == [5, 4])
 
         parents_fitness = np.array(self.fitness[indexes_of_parents])

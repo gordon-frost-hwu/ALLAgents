@@ -30,12 +30,13 @@ class OptimisePreset(object):
         self.individual_id = 0
         self.run_count = 1
 
-        num_generations = 80
+        num_generations = 400
         num_genes = 2
         gene_bounds = np.array([[1e-6, 1e-1] for gene in range(num_genes)])
         gene_init_range = np.array([[1e-6, 1e-1] for gene in range(num_genes)])
         gene_sigma = np.array([0.1 for gene in range(num_genes)])
         gene_mutation_probability = np.array([0.2 for gene in range(num_genes)])
+        gene_mutation_type = ["log", "log"]
         atol = np.array([1e-6 for gene in range(num_genes)])
 
         self.f_fitness_run_map = open("{0}{1}".format(self.result_dir, "/fitness_map.csv"), "w", 1)
@@ -47,6 +48,7 @@ class OptimisePreset(object):
         solution_description = SolutionDescription(num_genes, gene_bounds,
                                                    gene_init_range, gene_sigma,
                                                    gene_mutation_probability,
+                                                   gene_mutation_type,
                                                    atol)
         self.ga = pyga.GeneticAlgorithm(self.result_dir,
                                         solution_description,
@@ -82,11 +84,11 @@ class OptimisePreset(object):
             # create the environment and agent
             env = GymEnvironment(self.args.env, device=self.args.device)
             experiment = OptimisationExperiment(
-                self.agent(device=args.device, lr_v=individual[0], lr_pi=individual[1]), env,
+                self.agent(device=args.device, lr_v=individual[0], lr_pi=individual[1], log=args.log), env,
                 episodes=args.episodes,
                 frames=args.frames,
                 render=args.render,
-                log=True,
+                log=args.log,
                 quiet=True,
                 write_loss=False,
                 write_episode_return=True,
@@ -146,6 +148,9 @@ if __name__ == "__main__":
         "--frames", type=int, default=6e10, help="The number of training frames"
     )
     parser.add_argument(
+        "--repeat", type=int, default=1, help="The number of times to repeat the optimisation"
+    )
+    parser.add_argument(
         "--device",
         default="cuda",
         help="The name of the device to run the agent on (e.g. cpu, cuda, cuda:0)",
@@ -153,7 +158,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--render", default=False, help="Whether to render the environment."
     )
+    parser.add_argument(
+        "--log", default=False, help="Whether to log debug for visualization in tensorboard. "
+                                     "Note, this generates Gbs of data."
+    )
     args = parser.parse_args()
 
-    optimiser = OptimisePreset(args)
-    optimiser.run()
+    for _ in range(args.repeat):
+        optimiser = OptimisePreset(args)
+        optimiser.run()

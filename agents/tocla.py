@@ -35,12 +35,14 @@ class TOCLA(Agent):
                  k_max=50,
                  n=0.01,
                  sigma=1.0,
+                 log=True,
                  sigma_decay=0.9995,
                  sigma_min=0.1,
                  n_iter=100,
                  minibatch_size=32,
                  writer=DummyWriter()):
         self.writer = writer
+        self._log = log
         self._action = None
         self._state = None
         self._tde = None
@@ -86,7 +88,8 @@ class TOCLA(Agent):
         self._train_actor(state)
 
         if self._state is not None and self._tde is not None:
-            self.writer.add_scalar("state/tde", self._tde)
+            if self._log:
+                self.writer.add_scalar("state/tde", self._tde)
             self._replay_buffer.store(self._state, self._action, self._tde, state)
 
         self._state = state
@@ -148,8 +151,9 @@ class TOCLA(Agent):
         v = self.critic(s)
         loss = mse_loss(v, self._u)
         self.critic.reinforce(loss)
-        # self.writer.add_scalar("state/value", v[0])
-        # self.writer.add_scalar("state/target", self._u[0])
+        # if self._log:
+        #     self.writer.add_scalar("state/value", v[0])
+        #     self.writer.add_scalar("state/target", self._u[0])
 
         if self.K != 1:
             self._u = (self._u - rp) / (self.discount_factor * self.trace_decay)
@@ -182,13 +186,15 @@ class TOCLA(Agent):
         self.critic.reinforce(value_loss)
 
     def _normal(self, output):
-        self.writer.add_scalar("sigma", self.sigma)
+        if self._log:
+            self.writer.add_scalar("sigma", self.sigma)
         return Normal(output, self.sigma)
 
     def _choose_action(self, state):
         # If a feature ANN is provided, use it, otherwise raw state vector is used
         deterministic_action = self.policy.eval(state)
         # uncomment to log the policy output
+        # if self._log:
         # self.writer.add_scalar("action/det", deterministic_action)
 
         # Get the stochastic action by centering a Normal distribution on the policy output

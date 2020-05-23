@@ -16,7 +16,7 @@ def is_close(array1, array2, atol):
 class GeneticAlgorithm(object):
     def __init__(self, result_dir, solution_description,
                  population_size=8,
-                 generations=2000,
+                 generations=400,
                  crossover_probability=0.8,
                  mutation_probability=0.2,  # 0.05
                  elitism=True,
@@ -147,14 +147,15 @@ class GeneticAlgorithm(object):
                                                       self.solution_description.atol,
                                                       minimise=self._minimise_fitness):
                     self.update_population_logs(generation_idx, population, fitness)
-                    generation_idx += 1
                     print("CHILD REPLACED PARENT")
                 self.solution_idx += 1
 
             self.log_solution(call_fitness_function, child, child_fitness)
             self.log_best_in_generation(generation_idx, population, fitness)
+            generation_idx += 1
 
             print("")
+        print("MAX GENERATIONS REACHED!")
 
     def log_best_in_generation(self, generation_idx, population, fitness):
         best_idx = ga.get_n_best(fitness, 1, minimise=self._minimise_fitness)
