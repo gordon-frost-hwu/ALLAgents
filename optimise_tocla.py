@@ -80,11 +80,12 @@ class OptimisePreset(object):
                 self.agent(device=args.device,
                            lr_v=individual[0],
                            lr_pi=individual[1],
-                           trace_decay=individual[2]), env,
+                           trace_decay=individual[2],
+                           log=args.log), env,
                 episodes=args.episodes,
                 frames=args.frames,
                 render=args.render,
-                log=True,
+                log=args.log,
                 quiet=True,
                 write_loss=False,
                 write_episode_return=True,
@@ -152,6 +153,10 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--render", default=False, help="Whether to render the environment."
+    )
+    parser.add_argument(
+        "--log", default=False, help="Whether to log debug for visualization in tensorboard. "
+                                     "Note, this generates Gbs of data."
     )
 
     args = parser.parse_args()

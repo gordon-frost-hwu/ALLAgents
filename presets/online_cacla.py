@@ -10,6 +10,7 @@ from agents.online_cacla import OnlineCACLA
 def online_cacla(
         # Common settings
         device="cpu",
+        log=True,
         discount_factor=0.99,
         # Adam optimizer settings
         lr_v=1e-3,
@@ -61,7 +62,7 @@ def online_cacla(
         replay_buffer = ExperienceReplayBuffer(replay_buffer_size, device=device)
 
         # TODO - reintroduce TimeFeature wrapper
-        return OnlineCACLA(features, v, policy, replay_buffer, env.action_space, writer=writer, discount_factor=discount_factor)
+        return OnlineCACLA(features, v, policy, replay_buffer, env.action_space, log=log, writer=writer, discount_factor=discount_factor)
     return _online_cacla
 
 __all__ = ["online_cacla"]
