@@ -30,12 +30,13 @@ class OptimisePreset(object):
         self.individual_id = 0
         self.run_count = 1
 
-        num_generations = 80
+        num_generations = 400
         num_genes = 2
         gene_bounds = np.array([[1e-6, 1e-1] for gene in range(num_genes)])
         gene_init_range = np.array([[1e-6, 1e-1] for gene in range(num_genes)])
         gene_sigma = np.array([0.1 for gene in range(num_genes)])
         gene_mutation_probability = np.array([0.2 for gene in range(num_genes)])
+        gene_mutation_type = ["log", "log"]
         atol = np.array([1e-6 for gene in range(num_genes)])
 
         self.f_fitness_run_map = open("{0}{1}".format(self.result_dir, "/fitness_map.csv"), "w", 1)
@@ -47,13 +48,14 @@ class OptimisePreset(object):
         solution_description = SolutionDescription(num_genes, gene_bounds,
                                                    gene_init_range, gene_sigma,
                                                    gene_mutation_probability,
+                                                   gene_mutation_type,
                                                    atol)
         self.ga = pyga.GeneticAlgorithm(self.result_dir,
                                         solution_description,
                                         generations=num_generations,
                                         skip_known_solutions=True)
         # assign callback methods
-        self.ga.calculate_fitness = self.fitness
+        # self.ga.calculate_fitness = self.fitness
 
         # TODO - add normaliser here and pass down into agent
 
@@ -146,6 +148,9 @@ if __name__ == "__main__":
         "--frames", type=int, default=6e10, help="The number of training frames"
     )
     parser.add_argument(
+        "--repeat", type=int, default=1, help="The number of training frames"
+    )
+    parser.add_argument(
         "--device",
         default="cuda",
         help="The name of the device to run the agent on (e.g. cpu, cuda, cuda:0)",
@@ -155,5 +160,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    optimiser = OptimisePreset(args)
-    optimiser.run()
+    for _ in range(args.repeat):
+        optimiser = OptimisePreset(args)
+        optimiser.run()

@@ -23,7 +23,7 @@ class OptimisePreset(object):
         self.individual_id = 0
         self.run_count = 1
 
-        num_generations = 80
+        num_generations = 400
         num_genes = 3
         gene_bounds = np.array([[1e-6, 1e-1], [1e-6, 1e-1], [0.0, 1.0]])
         gene_init_range = np.array([[1e-6, 1e-1], [1e-6, 1e-1], [0.0, 1.0]])
@@ -143,6 +143,9 @@ if __name__ == "__main__":
         "--frames", type=int, default=6e10, help="The number of training frames"
     )
     parser.add_argument(
+        "--repeat", type=int, default=1, help="The number of training frames"
+    )
+    parser.add_argument(
         "--device",
         default="cuda",
         help="The name of the device to run the agent on (e.g. cpu, cuda, cuda:0)",
@@ -153,5 +156,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    optimiser = OptimisePreset(args)
-    optimiser.run()
+    for _ in range(args.repeat):
+        optimiser = OptimisePreset(args)
+        optimiser.run()
