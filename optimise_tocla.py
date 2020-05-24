@@ -1,14 +1,18 @@
 # pylint: disable=unused-import
 import argparse
 import os
+import numpy as np
+from copy import copy
+
+import presets
+
+# Autonomous Learning Library imports
 from all.environments import GymEnvironment
 from all.experiments import OptimisationExperiment
 from all.logging import ExperimentWriter
-import optimisation.pyga as pyga
-from optimisation.solution_description import SolutionDescription
-import numpy as np
-import presets
-from copy import copy
+
+# GA imports
+import gega
 
 class OptimisePreset(object):
     def __init__(self, args, write_loss=False):
@@ -38,17 +42,17 @@ class OptimisePreset(object):
         # gene_init_range = np.array([[0, 10] for gene in range(num_genes)])
         # gene_sigma = np.array([0.5 for gene in range(num_genes)])
         # gene_mutation_probability = np.array([0.2 for gene in range(num_genes)])
-        solution_description = SolutionDescription(num_genes, gene_bounds,
+        solution_description = gega.SolutionDescription(num_genes, gene_bounds,
                                                    gene_init_range, gene_sigma,
                                                    gene_mutation_probability,
                                                    gene_mutation_type,
                                                    atol)
-        self.ga = pyga.GeneticAlgorithm(self.result_dir,
+        self.ga = gega.GeneticAlgorithm(self.result_dir,
                                         solution_description,
                                         generations=num_generations,
                                         skip_known_solutions=True)
         # assign callback methods
-        self.ga.calculate_fitness = self.fitness
+        # self.ga.calculate_fitness = self.fitness
 
         # TODO - add normaliser here and pass down into agent
 
