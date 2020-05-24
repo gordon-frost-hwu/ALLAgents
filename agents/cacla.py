@@ -35,6 +35,7 @@ class CACLA(Agent):
                  sigma_min=0.1,
                  n_iter=100,
                  minibatch_size=32,
+                 log=True,
                  writer=DummyWriter()):
         self.features = features
         self.v = v
@@ -42,6 +43,7 @@ class CACLA(Agent):
         self.replay_buffer = buffer
         self.minibatch_size = minibatch_size
         self.discount_factor = discount_factor
+        self._log = log
         self.writer = writer
         self.sigma = sigma
         self.sigma_decay = sigma_decay
@@ -54,7 +56,8 @@ class CACLA(Agent):
         self._action_high = torch.tensor(action_space.high, device=policy.device)
 
     def _normal(self, output):
-        self.writer.add_scalar("sigma", self.sigma)
+        if self._log:
+            self.writer.add_scalar("sigma", self.sigma)
         return Normal(output, self.sigma)
 
     def act(self, state, reward):
@@ -69,6 +72,7 @@ class CACLA(Agent):
         self._features = self.features(state) if self.features is not None else state
         deterministic_action = self.policy.eval(self._features)
         # uncomment to log the policy output
+        # if self._log:
         # self.writer.add_scalar("action/det", deterministic_action)
 
         # Get the stochastic action by centering a Normal distribution on the policy output
@@ -86,7 +90,7 @@ class CACLA(Agent):
                 _, values, targets, _ = self.generate_targets()
                 # targets = rewards + self.discount_factor * values.detach()
                 self.update_critic(values=values, targets=targets)
-                # if not torch.isnan(targets[0]):
+                # if not torch.isnan(targets[0]) and self._log:
                 #     self.writer.add_scalar("target", targets[0])
 
             for i in range(self.n_iter):

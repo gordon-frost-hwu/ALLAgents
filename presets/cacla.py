@@ -12,8 +12,7 @@ def cacla(
         device="cpu",
         discount_factor=0.99,
         # Adam optimizer settings
-        lr_v=1e-3,
-        lr_pi=1e-4,
+        log=True,
         eps=0.01,   # from https://medium.com/autonomous-learning-library/radam-a-new-state-of-the-art-optimizer-for-rl-442c1e830564
         # Replay buffer settings
         replay_buffer_size=4000,
@@ -61,7 +60,7 @@ def cacla(
         replay_buffer = ExperienceReplayBuffer(replay_buffer_size, device=device)
 
         # TODO - reintroduce TimeFeature wrapper
-        return CACLA(features, v, policy, replay_buffer, env.action_space, writer=writer, discount_factor=discount_factor)
+        return CACLA(features, v, policy, replay_buffer, env.action_space, log=log, writer=writer, discount_factor=discount_factor)
     return _cacla
 
 __all__ = ["cacla"]

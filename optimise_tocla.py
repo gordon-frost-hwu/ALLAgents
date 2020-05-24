@@ -14,19 +14,12 @@ from all.logging import ExperimentWriter
 # GA imports
 import gega
 
-
 class OptimisePreset(object):
     def __init__(self, args, write_loss=False):
         self.args = args
         self._write_loss = write_loss
-        self.agent_name = args.agent
+        self.agent_name = "tocla"
         self.agent = getattr(presets, self.agent_name)
-        self.bounds = {
-            "aa": [1e-6, 1e-2],
-            "ac": [1e-6, 1e-2]
-        }
-        # "gamma": [0.1, 1.0]
-        # }
 
         self.result_dir = self.create_result_dir(self.agent_name, self.args.env)
 
@@ -35,12 +28,12 @@ class OptimisePreset(object):
         self.run_count = 1
 
         num_generations = 400
-        num_genes = 2
-        gene_bounds = np.array([[1e-6, 1e-1] for gene in range(num_genes)])
-        gene_init_range = np.array([[1e-6, 1e-1] for gene in range(num_genes)])
+        num_genes = 3
+        gene_bounds = np.array([[1e-6, 1e-1], [1e-6, 1e-1], [0.0, 1.0]])
+        gene_init_range = np.array([[1e-6, 1e-1], [1e-6, 1e-1], [0.0, 1.0]])
         gene_sigma = np.array([0.1 for gene in range(num_genes)])
         gene_mutation_probability = np.array([0.2 for gene in range(num_genes)])
-        gene_mutation_type = ["log", "log"]
+        gene_mutation_type = ["log", "log", "linear"]
         atol = np.array([1e-6 for gene in range(num_genes)])
 
         self.f_fitness_run_map = open("{0}{1}".format(self.result_dir, "/fitness_map.csv"), "w", 1)
@@ -59,7 +52,7 @@ class OptimisePreset(object):
                                         generations=num_generations,
                                         skip_known_solutions=True)
         # assign callback methods
-        self.ga.calculate_fitness = self.fitness
+        # self.ga.calculate_fitness = self.fitness
 
         # TODO - add normaliser here and pass down into agent
 
@@ -88,7 +81,11 @@ class OptimisePreset(object):
             # create the environment and agent
             env = GymEnvironment(self.args.env, device=self.args.device)
             experiment = OptimisationExperiment(
-                self.agent(device=args.device, lr_v=individual[0], lr_pi=individual[1], log=args.log), env,
+                self.agent(device=args.device,
+                           lr_v=individual[0],
+                           lr_pi=individual[1],
+                           trace_decay=individual[2],
+                           log=args.log), env,
                 episodes=args.episodes,
                 frames=args.frames,
                 render=args.render,
@@ -143,7 +140,6 @@ class OptimisePreset(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run a continuous actions benchmark.")
     parser.add_argument("env", help="Name of the env (see envs)")
-    parser.add_argument("agent", help="Name of the agent (e.g. cacla). See presets for available agents")
 
     parser.add_argument(
         "--episodes", type=int, default=2000, help="The number of training episodes"
@@ -152,7 +148,7 @@ if __name__ == "__main__":
         "--frames", type=int, default=6e10, help="The number of training frames"
     )
     parser.add_argument(
-        "--repeat", type=int, default=1, help="The number of times to repeat the optimisation"
+        "--repeat", type=int, default=1, help="The number of training frames"
     )
     parser.add_argument(
         "--device",
@@ -166,6 +162,7 @@ if __name__ == "__main__":
         "--log", default=False, help="Whether to log debug for visualization in tensorboard. "
                                      "Note, this generates Gbs of data."
     )
+
     args = parser.parse_args()
 
     for _ in range(args.repeat):
