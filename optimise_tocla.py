@@ -52,7 +52,7 @@ class OptimisePreset(object):
                                         generations=num_generations,
                                         skip_known_solutions=True)
         # assign callback methods
-        # self.ga.calculate_fitness = self.fitness
+        self.ga.calculate_fitness = self.fitness
 
         # TODO - add normaliser here and pass down into agent
 
