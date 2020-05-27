@@ -49,6 +49,7 @@ class OptimisePreset(object):
                                                    atol)
         self.ga = gega.GeneticAlgorithm(self.result_dir,
                                         solution_description,
+                                        3000, 75,
                                         generations=num_generations,
                                         skip_known_solutions=True)
         # assign callback methods
@@ -92,7 +93,7 @@ class OptimisePreset(object):
                 log=args.log,
                 quiet=True,
                 write_loss=False,
-                write_episode_return=True,
+                write_episode_return=args.log,
                 writer=self._make_writer(self.agent_name, env.name, self._write_loss, self.result_dir),
             )
             episodes_returns = np.array(experiment.runner.rewards)     # returns against episodes
