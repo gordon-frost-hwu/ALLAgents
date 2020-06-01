@@ -11,6 +11,8 @@ def cacla(
         # Common settings
         device="cpu",
         discount_factor=0.99,
+        lr_v=0.00011417943304348878,
+        lr_pi=0.0005984818889217654,
         # Adam optimizer settings
         log=True,
         eps=0.01,   # from https://medium.com/autonomous-learning-library/radam-a-new-state-of-the-art-optimizer-for-rl-442c1e830564
@@ -44,6 +46,7 @@ def cacla(
             policy_model,
             policy_optimizer,
             env.action_space,
+            quiet=not log,
             clip_grad=1.0,
             writer=writer,
             normalise_inputs=True,
@@ -52,6 +55,7 @@ def cacla(
 
         v = VNetwork(value_model,
                      value_optimizer,
+                     quiet=not log,
                      writer=writer,
                      normalise_inputs=True,
                      box=env.state_space,

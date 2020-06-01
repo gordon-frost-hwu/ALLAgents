@@ -44,6 +44,7 @@ def tocla(
             policy_model,
             policy_optimizer,
             env.action_space,
+            quiet=not log,
             clip_grad=1.0,
             writer=writer,
             normalise_inputs=True,
@@ -52,6 +53,7 @@ def tocla(
 
         v = VNetwork(value_model,
                      value_optimizer,
+                     quiet=not log,
                      writer=writer,
                      normalise_inputs=True,
                      box=env.state_space,
