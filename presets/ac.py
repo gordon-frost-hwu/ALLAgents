@@ -13,8 +13,8 @@ def ac(
         log=True,
         discount_factor=0.99,
         # Adam optimizer settings
-        lr_v=0.00018706405829273132,
-        lr_pi=0.004489441661754989,
+        lr_v=0.0007,
+        lr_pi=0.000076956,
         eps=0.01,   # from https://medium.com/autonomous-learning-library/radam-a-new-state-of-the-art-optimizer-for-rl-442c1e830564
         # Replay buffer settings
         replay_buffer_size=4000,
