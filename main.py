@@ -40,7 +40,7 @@ def run():
 
     result_dir = create_result_dir(agent_name, args.env)
 
-    num_repeats = 10
+    num_repeats = 20
     for i in range(num_repeats):
         # run the experiment
         OptimisationExperiment(
