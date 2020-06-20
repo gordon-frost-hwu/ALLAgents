@@ -12,9 +12,9 @@ def tocla(
         device="cpu",
         discount_factor=0.99,   # gamma
         # Adam optimizer settings
-        lr_v=0.00011417943304348878,
-        lr_pi=0.0005984818889217654,
-        trace_decay=0.9,
+        lr_v=0.000677649592542,
+        lr_pi=0.002639747673029,
+        trace_decay=0.47720777694962,
         log=True,
         eps=0.01,   # from https://medium.com/autonomous-learning-library/radam-a-new-state-of-the-art-optimizer-for-rl-442c1e830564
         # Replay buffer settings
