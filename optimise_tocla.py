@@ -14,11 +14,13 @@ from all.logging import ExperimentWriter
 # GA imports
 import gega
 
+compatible_agents = ["tocla", "fac"]
+
 class OptimisePreset(object):
     def __init__(self, args, write_loss=False):
         self.args = args
         self._write_loss = write_loss
-        self.agent_name = "tocla"
+        self.agent_name = args.agent
         self.agent = getattr(presets, self.agent_name)
 
         self.result_dir = self.create_result_dir(self.agent_name, self.args.env)
@@ -141,7 +143,8 @@ class OptimisePreset(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run a continuous actions benchmark.")
     parser.add_argument("env", help="Name of the env (see envs)")
-
+    parser.add_argument("agent", help="Name of the agent (e.g. cacla). See presets for available agents")
+    
     parser.add_argument(
         "--episodes", type=int, default=2000, help="The number of training episodes"
     )
@@ -165,6 +168,10 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    if args.agent not in compatible_agents:
+        print("Only the agents {0} can be used with this optimisation script".format(compatible_agents))
+        exit(0)
 
     for _ in range(args.repeat):
         optimiser = OptimisePreset(args)
