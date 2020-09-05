@@ -59,7 +59,7 @@ class OptimisePreset(object):
                                         3000, 75,
                                         generations=num_generations,
                                         skip_known_solutions=True,
-                                        load_past_data=True)
+                                        load_past_data=self._load_past)
         # assign callback methods
         self.ga.calculate_fitness = self.fitness
 
