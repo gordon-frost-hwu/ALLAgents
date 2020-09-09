@@ -19,6 +19,8 @@ class OptimisePreset(object):
     def __init__(self, args, write_loss=False):
         self.args = args
         self._write_loss = write_loss
+        self._load_past = args.load != ""
+        self._past_run_to_load = args.load
         self.agent_name = args.agent
         self.agent = getattr(presets, self.agent_name)
         self.bounds = {
@@ -28,7 +30,10 @@ class OptimisePreset(object):
         # "gamma": [0.1, 1.0]
         # }
 
-        self.result_dir = self.create_result_dir(self.agent_name, self.args.env)
+        if not self._load_past:
+            self.result_dir = self.create_result_dir(self.agent_name, self.args.env)
+        else:
+            self.result_dir = self._past_run_to_load
 
         self.ind_lookup = {}
         self.individual_id = 0
@@ -58,7 +63,8 @@ class OptimisePreset(object):
                                         solution_description,
                                         3000, 75,
                                         generations=num_generations,
-                                        skip_known_solutions=True)
+                                        skip_known_solutions=True,
+                                        load_past_data=self._load_past)
         # assign callback methods
         self.ga.calculate_fitness = self.fitness
 
@@ -66,17 +72,6 @@ class OptimisePreset(object):
 
     def run(self):
         self.ga.run()
-
-    def check_for_past_result(self, individual):
-        closest = None
-        tolerance = 1e-4
-        for key in self.ind_lookup.keys():
-            diff = np.array(key) - np.array(individual)
-            match = all(abs(d) < tolerance for d in diff)
-            if match:
-                print("Individual {0} matched with {1}".format(individual, key))
-                closest = key
-        return closest
 
     def fitness(self, individual):
         print("Running individual: {0}".format(individual))
@@ -154,6 +149,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--repeat", type=int, default=1, help="The number of times to repeat the optimisation"
+    )
+    parser.add_argument(
+        "--load", type=str, default="", help="Load a past optimisation run and continue"
     )
     parser.add_argument(
         "--device",
