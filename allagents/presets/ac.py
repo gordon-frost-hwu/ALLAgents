@@ -4,8 +4,8 @@ from all.logging import DummyWriter
 from all.memory import ExperienceReplayBuffer
 from all.policies import DeterministicPolicy
 
-import models
-from agents.ac import AC
+import allagents.models as models
+from allagents.agents.ac import AC
 
 def ac(
         # Common settings

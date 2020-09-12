@@ -4,8 +4,8 @@ from all.logging import DummyWriter
 from all.memory import ExperienceReplayBuffer
 from all.policies import DeterministicPolicy
 
-import models
-from agents.online_cacla import OnlineCACLA
+import allagents.models as models
+from allagents.agents.online_cacla import OnlineCACLA
 
 def online_cacla(
         # Common settings

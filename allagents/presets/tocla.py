@@ -4,8 +4,8 @@ from all.logging import DummyWriter
 from all.memory import ExperienceReplayBuffer
 from all.policies import DeterministicPolicy
 
-import models
-from agents.tocla import TOCLA
+import allagents.models as models
+from allagents.agents.tocla import TOCLA
 
 def tocla(
         # Common settings
