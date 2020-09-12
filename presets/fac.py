@@ -12,9 +12,9 @@ def fac(
         device="cpu",
         discount_factor=0.99,   # gamma
         # Adam optimizer settings
-        lr_v=0.001494254526,
-        lr_pi=0.001487967136,
-        trace_decay=0.04539905209,
+        lr_v=0.001266006463,
+        lr_pi=0.001369217032,
+        trace_decay=0.0413122279,
         log=True,
         eps=0.01,   # from https://medium.com/autonomous-learning-library/radam-a-new-state-of-the-art-optimizer-for-rl-442c1e830564
         # Replay buffer settings
