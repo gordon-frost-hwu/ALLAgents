@@ -54,8 +54,8 @@ class TOCLA(Agent):
         self.sigma = sigma
         self.sigma_decay = sigma_decay
         self.sigma_min = sigma_min
-        self._action_low = torch.tensor(action_space.low, device=policy.device)
-        self._action_high = torch.tensor(action_space.high, device=policy.device)
+        self._action_low = torch.tensor(action_space.low, device=policy.device).float()
+        self._action_high = torch.tensor(action_space.high, device=policy.device).float()
         self.policy = policy
 
         # Critic state
@@ -84,6 +84,11 @@ class TOCLA(Agent):
         self._ready = False
 
     def act(self, state, reward):
+        self.act_delayed(state, reward)
+        self._action = self._choose_action(state)
+        return self._action
+
+    def act_delayed(self, state, reward):
         self._train_critic(state, reward)
         self._train_actor(state)
 
@@ -93,7 +98,6 @@ class TOCLA(Agent):
             self._replay_buffer.store(self._state, self._action, self._tde, state)
 
         self._state = state
-        self._action = self._choose_action(state)
         return self._action
 
     def _train_critic(self, state, reward):
@@ -198,7 +202,7 @@ class TOCLA(Agent):
         # self.writer.add_scalar("action/det", deterministic_action)
 
         # Get the stochastic action by centering a Normal distribution on the policy output
-        stochastic_action = self._normal(deterministic_action).sample()
+        stochastic_action = self._normal(deterministic_action).sample().float()
 
         # Clip the stochastic action to the gym environment's action space
         stochastic_action = torch.max(stochastic_action, self._action_low)

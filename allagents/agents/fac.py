@@ -49,8 +49,8 @@ class ForwardAC(Agent):
         self.sigma = sigma
         self.sigma_decay = sigma_decay
         self.sigma_min = sigma_min
-        self._action_low = torch.tensor(action_space.low, device=policy.device)
-        self._action_high = torch.tensor(action_space.high, device=policy.device)
+        self._action_low = torch.tensor(action_space.low, device=policy.device).float()
+        self._action_high = torch.tensor(action_space.high, device=policy.device).float()
         self.policy = policy
 
         # Critic state
