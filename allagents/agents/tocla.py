@@ -84,8 +84,8 @@ class TOCLA(Agent):
         self._ready = False
 
     def act(self, state, reward):
-        self.act_delayed(state, reward)
-        self._action = self._choose_action(state)
+        deterministic_action = self.act_delayed(state, reward)
+        self._action = self._choose_action(deterministic_action)
         return self._action
 
     def act_delayed(self, state, reward):
@@ -94,11 +94,12 @@ class TOCLA(Agent):
 
         if self._state is not None and self._tde is not None:
             if self._log:
+                # print(self.writer.file_writer.get_logdir())
                 self.writer.add_scalar("state/tde", self._tde)
             self._replay_buffer.store(self._state, self._action, self._tde, state)
 
         self._state = state
-        return self._action
+        return self.policy.eval(state)
 
     def _train_critic(self, state, reward):
         if self._state is None:
@@ -194,9 +195,9 @@ class TOCLA(Agent):
             self.writer.add_scalar("sigma", self.sigma)
         return Normal(output, self.sigma)
 
-    def _choose_action(self, state):
+    def _choose_action(self, deterministic_action):
         # If a feature ANN is provided, use it, otherwise raw state vector is used
-        deterministic_action = self.policy.eval(state)
+
         # uncomment to log the policy output
         # if self._log:
         # self.writer.add_scalar("action/det", deterministic_action)
