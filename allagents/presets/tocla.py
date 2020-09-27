@@ -11,10 +11,11 @@ def tocla(
         # Common settings
         device="cpu",
         discount_factor=0.99,   # gamma
-        # Adam optimizer settings
-        lr_v=0.001125209337,
+        lr_v=0.001125209337,    # Ten runs
         lr_pi=0.00259986294,
         trace_decay=0.5306405172,
+        sigma=0.1,
+        sigma_decay=1.0,
         # four runs
         # lr_v=0.0006983937324,
         # lr_pi=0.002654206888,
@@ -66,7 +67,13 @@ def tocla(
 
 
         # TODO - reintroduce TimeFeature wrapper
-        return TOCLA(v, policy, replay_buffer, env.action_space, log=log, trace_decay=trace_decay, writer=writer, discount_factor=discount_factor)
+        return TOCLA(v, policy, replay_buffer, env.action_space,
+                     sigma=sigma,
+                     sigma_decay=sigma_decay,
+                     log=log,
+                     trace_decay=trace_decay,
+                     writer=writer,
+                     discount_factor=discount_factor)
     return _tocla
 
 __all__ = ["tocla"]

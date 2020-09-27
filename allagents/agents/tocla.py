@@ -82,24 +82,35 @@ class TOCLA(Agent):
         self._c = 1.0
         self._v_current = 0
         self._ready = False
+        self._step = 0
+        self.exploration = None
 
     def act(self, state, reward):
         deterministic_action = self.act_delayed(state, reward)
         self._action = self._choose_action(deterministic_action)
+        self.exploration = self._action - deterministic_action
+        print("EXPLORED........")
         return self._action
 
     def act_delayed(self, state, reward):
+        print("ACT_DELAYED")
         self._train_critic(state, reward)
         self._train_actor(state)
 
         if self._state is not None and self._tde is not None:
             if self._log:
                 # print(self.writer.file_writer.get_logdir())
-                self.writer.add_scalar("state/tde", self._tde)
+                self.writer.add_scalar("state/tde", self._tde, step=self._step)
+                print("tde: {0}".format(self._tde))
             self._replay_buffer.store(self._state, self._action, self._tde, state)
 
         self._state = state
+        self._step += 1
         return self.policy.eval(state)
+
+    @property
+    def tde(self):
+        return self._tde
 
     def _train_critic(self, state, reward):
         if self._state is None:
@@ -113,6 +124,10 @@ class TOCLA(Agent):
 
         if not self._fifo.full():
             self._fifo.put((self._state, self._action, reward, state, rho))
+        # print("v_current: {0}".format(self._v_current))
+        # print("v_next: {0}".format(v_next))
+        # print("agent._train_critic reward: {0}".format(reward))
+
         self._tde = reward + (self.discount_factor * v_next) - self._v_current
         self._v_current = v_next
 
@@ -165,25 +180,32 @@ class TOCLA(Agent):
 
     def _train_actor(self, state):
         # only train (update weights) at the end of an episode; i.e. at a terminal state
-        if state.done:
-            for i in range(self.n_iter):
-                # features, values, targets, actions = self.generate_targets()
-                features, stochastic_actions, tde, _, _ = self._replay_buffer.sample(self.minibatch_size)
+        # if state.done:
+        if len(self._replay_buffer) == 0:
+            return
+
+        for i in range(self.n_iter):
+            # features, values, targets, actions = self.generate_targets()
+            features, stochastic_actions, tde, _, _ = self._replay_buffer.sample(self.minibatch_size)
+
+            # Get the indexes where the TDE is positive (i.e. the action resulted in a good state transition)
+            idx = torch.where(tde > 0.0)[0]
+            if len(idx) > 0:
                 greedy_actions = self.policy(features)
 
-                # Get the indexes where the TDE is positive (i.e. the action resulted in a good state transition)
-                idx = torch.where(tde > 0.0)[0]
-                if len(idx) > 0:
-                    policy_loss = mse_loss(greedy_actions[idx], stochastic_actions[idx])
+                policy_loss = mse_loss(greedy_actions[idx], stochastic_actions[idx])
+                policy_loss = policy_loss.float()
+                policy_loss = policy_loss.cpu()
 
-                    if not torch.isnan(policy_loss):
-                        self.policy.reinforce(policy_loss)
-                    else:
-                        print("policy loss is NaN")
+                if not torch.isnan(policy_loss):
+                    self.policy.reinforce(policy_loss)
+                else:
+                    print("policy loss is NaN")
 
-            # Decay the exploration
-            if self.sigma > self.sigma_min:
-                self.sigma *= self.sigma_decay
+        # Decay the exploration
+        # TODO - correct location
+        if self.sigma > self.sigma_min:
+            self.sigma *= self.sigma_decay
 
     def update_critic(self, values, targets):
         # backward pass
