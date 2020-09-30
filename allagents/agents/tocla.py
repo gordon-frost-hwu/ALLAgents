@@ -38,7 +38,7 @@ class TOCLA(Agent):
                  log=True,
                  sigma_decay=0.9995,
                  sigma_min=0.1,
-                 n_iter=100,
+                 n_iter=1,
                  minibatch_size=32,
                  writer=DummyWriter()):
         self.writer = writer
@@ -89,19 +89,16 @@ class TOCLA(Agent):
         deterministic_action = self.act_delayed(state, reward)
         self._action = self._choose_action(deterministic_action)
         self.exploration = self._action - deterministic_action
-        print("EXPLORED........")
         return self._action
 
     def act_delayed(self, state, reward):
-        print("ACT_DELAYED")
         self._train_critic(state, reward)
         self._train_actor(state)
 
         if self._state is not None and self._tde is not None:
             if self._log:
                 # print(self.writer.file_writer.get_logdir())
-                self.writer.add_scalar("state/tde", self._tde, step=self._step)
-                print("tde: {0}".format(self._tde))
+                self.writer.add_scalar("state/tde", self._tde)
             self._replay_buffer.store(self._state, self._action, self._tde, state)
 
         self._state = state
