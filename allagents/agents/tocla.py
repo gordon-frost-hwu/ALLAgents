@@ -85,6 +85,10 @@ class TOCLA(Agent):
         self._step = 0
         self.exploration = None
 
+    @property
+    def v_current(self):
+        return self._v_current
+
     def act(self, state, reward):
         deterministic_action = self.act_delayed(state, reward)
         self._action = self._choose_action(deterministic_action)
