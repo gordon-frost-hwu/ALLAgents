@@ -11,9 +11,9 @@ def tocla(
         # Common settings
         device="cpu",
         discount_factor=0.99,   # gamma
-        lr_v=0.001125209337,    # Ten runs
-        lr_pi=0.000259986294,
-        trace_decay=0.9,
+        lr_v=0.01125209337,    # Ten runs
+        lr_pi=0.0259986294,
+        trace_decay=0.1,
         sigma=1.0,
         sigma_decay=0.9998,
         # four runs
@@ -24,8 +24,8 @@ def tocla(
         eps=0.01,   # from https://medium.com/autonomous-learning-library/radam-a-new-state-of-the-art-optimizer-for-rl-442c1e830564
         # Replay buffer settings
         replay_buffer_size=4000,
-        hidden1=400,
-        hidden2=300,
+        hidden1=4,
+        hidden2=3,
 ):
     """
     True Online Continuous Learning Automation (TOCLA) classic control preset.

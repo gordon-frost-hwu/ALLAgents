@@ -203,10 +203,10 @@ class TOCLA(Agent):
                 else:
                     print("policy loss is NaN")
 
-        # Decay the exploration
-        # TODO - correct location
-        if self.sigma > self.sigma_min:
-            self.sigma *= self.sigma_decay
+            # Decay the exploration
+            # TODO - correct location
+            if self.sigma > self.sigma_min:
+                self.sigma *= self.sigma_decay
 
     def update_critic(self, values, targets):
         # backward pass
