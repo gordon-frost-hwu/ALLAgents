@@ -12,7 +12,7 @@ def tocla(
         device="cpu",
         discount_factor=0.99,   # gamma
         lr_v=0.01125209337,    # Ten runs
-        lr_pi=0.0259986294,
+        lr_pi=0.00259986294,
         trace_decay=0.1,
         sigma=1.0,
         sigma_decay=0.9998,
