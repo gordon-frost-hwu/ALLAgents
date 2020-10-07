@@ -38,7 +38,7 @@ class TOCLA(Agent):
                  log=True,
                  sigma_decay=0.9995,
                  sigma_min=0.1,
-                 n_iter=1,
+                 n_iter=100,
                  minibatch_size=32,
                  writer=DummyWriter()):
         self.writer = writer
