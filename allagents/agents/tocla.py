@@ -38,7 +38,7 @@ class TOCLA(Agent):
                  log=True,
                  sigma_decay=0.9995,
                  sigma_min=0.1,
-                 n_iter=100,
+                 n_iter=10,
                  minibatch_size=32,
                  writer=DummyWriter()):
         self.writer = writer
@@ -102,7 +102,7 @@ class TOCLA(Agent):
         if self._state is not None and self._tde is not None:
             if self._log:
                 # print(self.writer.file_writer.get_logdir())
-                self.writer.add_scalar("state/tde", self._tde)
+                self.writer.add_scalar("state/tde", self._tde.detach())
             self._replay_buffer.store(self._state, self._action, self._tde, state)
 
         self._state = state
@@ -223,7 +223,7 @@ class TOCLA(Agent):
 
         # uncomment to log the policy output
         # if self._log:
-        # self.writer.add_scalar("action/det", deterministic_action)
+        # self.writer.add_scalar("action/det", deterministic_action.detach())
 
         # Get the stochastic action by centering a Normal distribution on the policy output
         stochastic_action = self._normal(deterministic_action).sample().float()
