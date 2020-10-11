@@ -1,5 +1,5 @@
 # ALLAgents
-This Repo builds upon the Autonomous Learning Library (ALL) (https://github.com/cpnota/autonomous-learning-library), adding the CACLA reinforcement learning agent.
+This Repo builds upon the Autonomous Learning Library (ALL) (https://github.com/cpnota/autonomous-learning-library), adding the AC, CACLA, FAC, and TOCLA reinforcement learning agents.
 
 Currently, this repo requires some changes in the ALL library (which are on the features/normalise_inputs feature branch) of the forked ALL repository
 
