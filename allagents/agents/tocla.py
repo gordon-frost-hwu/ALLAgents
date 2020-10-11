@@ -185,6 +185,7 @@ class TOCLA(Agent):
         if len(self._replay_buffer) == 0:
             return
 
+        policy_updated = False
         for i in range(self.n_iter):
             # features, values, targets, actions = self.generate_targets()
             features, stochastic_actions, tde, _, _ = self._replay_buffer.sample(self.minibatch_size)
@@ -200,11 +201,12 @@ class TOCLA(Agent):
 
                 if not torch.isnan(policy_loss):
                     self.policy.reinforce(policy_loss)
+                    policy_updated = True
                 else:
                     print("policy loss is NaN")
 
+        if policy_updated:
             # Decay the exploration
-            # TODO - correct location
             if self.sigma > self.sigma_min:
                 self.sigma *= self.sigma_decay
 
