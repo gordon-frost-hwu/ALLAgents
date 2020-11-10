@@ -109,6 +109,24 @@ class TOCLA(Agent):
         self._step += 1
         return self.policy.eval(state)
 
+    def act2(self, state, reward, exploration):
+        self._train_critic(state, reward)
+        self._train_actor(state)
+
+        if self._state is not None and self._tde is not None:
+            if self._log:
+                # print(self.writer.file_writer.get_logdir())
+                self.writer.add_scalar("state/tde", self._tde.detach())
+            self._replay_buffer.store(self._state, self._action, self._tde, state)
+
+        self._state = state
+        self._step += 1
+
+        deterministic_action = self.policy.eval(state)
+        self._action = deterministic_action + exploration
+        return deterministic_action
+
+
     @property
     def tde(self):
         return self._tde
@@ -116,7 +134,7 @@ class TOCLA(Agent):
     def _train_critic(self, state, reward):
         if self._state is None:
             return
-
+        # print("Previous state {0} != {1}".format(self._state.raw, state.raw))
         # compute the state value for t+1 timestep
         # detach the Torch Tensor (make leaf node?) to avoid generated graphs being shared
         # and inhibiting consectutive backward passes
