@@ -16,7 +16,7 @@ def init_weights(m):
     # https://stackoverflow.com/questions/49433936/how-to-initialize-weights-in-pytorch
     if type(m) == nn.Linear:
         # torch.nn.init.xavier_uniform_(m.weight, gain=torch.nn.init.calculate_gain('tanh'))
-        torch.nn.init.uniform_(m.weight, a=-0.1, b=0.1)
+        torch.nn.init.uniform_(m.weight, a=-0.05, b=0.05)
         nn.init.constant_(m.bias.data, 0)
 
 
