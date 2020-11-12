@@ -14,17 +14,18 @@ import torch.nn
 
 def init_weights(m):
     if type(m) == nn.Linear:
-        torch.nn.init.xavier_uniform(m.weight)
-        m.bias.data.fill_(0.001)
+        # torch.nn.init.xavier_uniform_(m.weight, gain=torch.nn.init.calculate_gain('tanh'))
+        torch.nn.init.uniform_(m.weight, a=-0.1, b=0.1)
+        nn.init.constant_(m.bias.data, 0)
 
 
 def create_net(input_dim, output_dim, hidden1, hidden2):
     net = nn.Sequential(
         nn.Linear(input_dim, hidden1),
-        nn.ReLU(),
-        nn.Linear(hidden1, hidden2),
-        nn.ReLU(),
-        nn.Linear(hidden2, output_dim)
+        nn.Tanh(),
+        nn.Linear(hidden1, output_dim),
+        # nn.ReLU(),
+        # nn.Linear(hidden2, output_dim)
     )
     net.apply(init_weights)
     net.float()
