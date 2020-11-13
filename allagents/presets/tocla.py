@@ -1,7 +1,7 @@
 from torch.optim import Adam, SGD
 from all.approximation import VNetwork, FeatureNetwork
 from all.logging import DummyWriter
-from all.memory import ExperienceReplayBuffer
+from all.memory import MyReplayBuffer
 from all.policies import DeterministicPolicy
 
 import allagents.models as models
@@ -11,9 +11,9 @@ def tocla(
         # Common settings
         device="cpu",
         discount_factor=0.9,   # gamma
-        lr_v=0.0004,    # Ten runs
-        lr_pi=0.00025,
-        trace_decay=0.8,
+        lr_v=0.001,    # Ten runs
+        lr_pi=0.0001,
+        trace_decay=0.93,
         sigma=1.0,
         sigma_decay=0.9998,
         # four runs
@@ -63,7 +63,7 @@ def tocla(
                      normalise_inputs=True,
                      box=env.state_space,
                      )
-        replay_buffer = ExperienceReplayBuffer(replay_buffer_size, device=device)
+        replay_buffer = MyReplayBuffer(replay_buffer_size, device=device)
 
 
         # TODO - reintroduce TimeFeature wrapper

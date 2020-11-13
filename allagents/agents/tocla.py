@@ -117,12 +117,13 @@ class TOCLA(Agent):
             if self._log:
                 # print(self.writer.file_writer.get_logdir())
                 self.writer.add_scalar("state/tde", self._tde.detach())
-            self._replay_buffer.store(self._state, self._action, self._tde, state)
+            # action = self._action.detach()
+            self._replay_buffer.store(self._state, self._action.clone().detach() - exploration, self._action.clone().detach(), self._tde.detach(), state)
 
         self._state = state
         self._step += 1
 
-        deterministic_action = self.policy.eval(state)
+        deterministic_action = self.policy(state)
         self._action = deterministic_action + exploration
         return deterministic_action
 
@@ -205,20 +206,26 @@ class TOCLA(Agent):
 
         policy_updated = False
         for i in range(self.n_iter):
+
             # features, values, targets, actions = self.generate_targets()
-            features, stochastic_actions, tde, _, _ = self._replay_buffer.sample(self.minibatch_size)
+            states, deterministic_actions, stochastic_actions, tde, next_states, _ = self._replay_buffer.sample(self.minibatch_size)
 
             # Get the indexes where the TDE is positive (i.e. the action resulted in a good state transition)
             idx = torch.where(tde > 0.0)[0]
             if len(idx) > 0:
-                greedy_actions = self.policy(features)
-
-                policy_loss = mse_loss(greedy_actions[idx], stochastic_actions[idx])
+                greedy_actions = self.policy(states[idx])
+                print("Det Actions: {0}".format(greedy_actions))
+                print("Sto Actions: {0}".format(stochastic_actions[idx]))
+                # TODO - undo this!
+                policy_loss = mse_loss(greedy_actions, stochastic_actions[idx])
                 policy_loss = policy_loss.float()
                 policy_loss = policy_loss.cpu()
 
                 if not torch.isnan(policy_loss):
-                    self.policy.reinforce(policy_loss)
+                    # retaining_graph = i < self.n_iter - 1
+                    # print("iter number {0} is retaining graph {1}".format(i, retaining_graph))
+                    print("loss: {0}".format(policy_loss))
+                    self.policy.reinforce2(policy_loss, retain_graph=False)
                     policy_updated = True
                 else:
                     print("policy loss is NaN")
