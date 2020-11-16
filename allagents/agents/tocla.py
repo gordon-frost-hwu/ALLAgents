@@ -189,7 +189,8 @@ class TOCLA(Agent):
         s, u, r, sp, rp = self._fifo.get()
         # Update critic weights
         v = self.critic(s)
-        loss = mse_loss(v, self._u)
+        # below indexing due to /home/gordon/software/ALLAgents/allagents/agents/tocla.py:192: UserWarning: Using a target size (torch.Size([1, 1, 1])) that is different to the input size (torch.Size([1])). This will likely lead to incorrect results due to broadcasting. Please ensure they have the same size.
+        loss = mse_loss(v, self._u[0][0])
         self.critic.reinforce(loss)
         # if self._log:
         #     self.writer.add_scalar("state/value", v[0])
@@ -214,17 +215,11 @@ class TOCLA(Agent):
             idx = torch.where(tde > 0.0)[0]
             if len(idx) > 0:
                 greedy_actions = self.policy(states[idx])
-                print("Det Actions: {0}".format(greedy_actions))
-                print("Sto Actions: {0}".format(stochastic_actions[idx]))
-                # TODO - undo this!
                 policy_loss = mse_loss(greedy_actions, stochastic_actions[idx])
                 policy_loss = policy_loss.float()
                 policy_loss = policy_loss.cpu()
 
                 if not torch.isnan(policy_loss):
-                    # retaining_graph = i < self.n_iter - 1
-                    # print("iter number {0} is retaining graph {1}".format(i, retaining_graph))
-                    print("loss: {0}".format(policy_loss))
                     self.policy.reinforce2(policy_loss, retain_graph=False)
                     policy_updated = True
                 else:
