@@ -190,7 +190,7 @@ class TOCLA(Agent):
         # Update critic weights
         v = self.critic(s)
         # below indexing due to /home/gordon/software/ALLAgents/allagents/agents/tocla.py:192: UserWarning: Using a target size (torch.Size([1, 1, 1])) that is different to the input size (torch.Size([1])). This will likely lead to incorrect results due to broadcasting. Please ensure they have the same size.
-        loss = mse_loss(v, self._u[0][0])
+        loss = mse_loss(v, self._u)
         self.critic.reinforce(loss)
         # if self._log:
         #     self.writer.add_scalar("state/value", v[0])
