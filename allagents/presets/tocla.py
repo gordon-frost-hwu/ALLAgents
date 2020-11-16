@@ -11,11 +11,15 @@ def tocla(
         # Common settings
         device="cpu",
         discount_factor=0.9,   # gamma
-        lr_v=0.0001,    # Ten runs
-        lr_pi=0.00001,
-        trace_decay=0.93,
         sigma=1.0,
         sigma_decay=0.9998,
+        lr_v=0.001,
+        lr_pi=0.00001,
+        trace_decay=0.93,
+        # Ten runs
+        # lr_v=0.001125209337,
+        # lr_pi=0.00259986294,
+        # trace_decay=0.5306405172,
         # four runs
         # lr_v=0.0006983937324,
         # lr_pi=0.002654206888,
