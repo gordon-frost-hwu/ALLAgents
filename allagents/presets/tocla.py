@@ -13,8 +13,8 @@ def tocla(
         discount_factor=0.9,   # gamma
         sigma=1.0,
         sigma_decay=0.9998,
-        lr_v=0.001,
-        lr_pi=0.00001,
+        lr_v=0.01,
+        lr_pi=0.000005,
         trace_decay=0.93,
         # Ten runs
         # lr_v=0.001125209337,
