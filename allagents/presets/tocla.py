@@ -3,9 +3,13 @@ from all.approximation import VNetwork, FeatureNetwork
 from all.logging import DummyWriter
 from all.memory import MyReplayBuffer
 from all.policies import DeterministicPolicy
-
+from all.environments.state import State
+from torch.nn.functional import mse_loss
 import allagents.models as models
 from allagents.agents.tocla import TOCLA
+from itertools import permutations
+from numpy import linspace
+import torch
 
 def tocla(
         # Common settings
@@ -13,7 +17,7 @@ def tocla(
         discount_factor=0.9,   # gamma
         sigma=1.0,
         sigma_decay=0.9998,
-        lr_v=0.01,
+        lr_v=0.005,
         lr_pi=0.000005,
         trace_decay=0.93,
         # Ten runs
@@ -69,6 +73,18 @@ def tocla(
                      )
         replay_buffer = MyReplayBuffer(replay_buffer_size, device=device)
 
+        r = linspace(-1, 1, 21)
+        states = State(torch.as_tensor(list(permutations(r, 2)), dtype=torch.float32).cuda())
+        for i in range(200):
+            values = v(states)
+            # print("values before: {0}".format(values[0:20]))
+            target_values = torch.as_tensor([-1000 for x in range(values.shape[0])], dtype=torch.float32).cuda()
+
+            loss = mse_loss(values, target_values)
+            v.reinforce(loss)
+
+        new_values = v.eval(states)
+        print("values after: {0}".format(new_values[0:20]))
 
         # TODO - reintroduce TimeFeature wrapper
         return TOCLA(v, policy, replay_buffer, env.action_space,
