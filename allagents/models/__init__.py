@@ -24,10 +24,10 @@ def create_net(input_dim, output_dim, hidden1, hidden2):
     net = nn.Sequential(
         nn.Linear(input_dim, hidden1),
         nn.Tanh(),
-        nn.Linear(hidden1, hidden2),
-        nn.Tanh(),
+        # nn.Linear(hidden1, hidden2),
+        # nn.Tanh(),
         # nn.ReLU(),
-        nn.Linear(hidden2, output_dim)
+        nn.Linear(hidden1, output_dim)
     )
     net.apply(init_weights)
     net.float()
