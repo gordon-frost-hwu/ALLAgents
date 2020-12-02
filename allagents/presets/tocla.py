@@ -14,12 +14,12 @@ import torch
 def tocla(
         # Common settings
         device="cpu",
-        discount_factor=0.9,   # gamma
+        discount_factor=0.98,   # gamma
         sigma=1.0,
         sigma_decay=0.9998,
         lr_v=0.005,
         lr_pi=0.000005,
-        trace_decay=0.93,
+        trace_decay=0.1,
         # Ten runs
         # lr_v=0.001125209337,
         # lr_pi=0.00259986294,
