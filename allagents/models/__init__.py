@@ -7,6 +7,7 @@ received from the environment.
 '''
 from all import nn
 import torch.nn
+from .rbf_network import gaussian, RBFNetwork
 
 # for how to initialise weights
 # https://stackoverflow.com/questions/49433936/how-to-initialize-weights-in-pytorch/49433937#49433937
@@ -21,14 +22,15 @@ def init_weights(m):
 
 
 def create_net(input_dim, output_dim, hidden1, hidden2):
-    net = nn.Sequential(
-        nn.Linear(input_dim, hidden1),
-        nn.Tanh(),
-        # nn.Linear(hidden1, hidden2),
-        # nn.Tanh(),
-        # nn.ReLU(),
-        nn.Linear(hidden1, output_dim)
-    )
+    # net = nn.Sequential(
+    #     nn.Linear(input_dim, hidden1),
+    #     nn.Tanh(),
+    #     # nn.Linear(hidden1, hidden2),
+    #     # nn.Tanh(),
+    #     # nn.ReLU(),
+    #     nn.Linear(hidden1, output_dim)
+    # )
+    net = RBFNetwork([input_dim, output_dim], [40])
     net.apply(init_weights)
     net.float()
     return net
