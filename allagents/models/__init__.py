@@ -25,6 +25,7 @@ def actor(env, hidden1=400, hidden2=300):
         nn.Linear(hidden2, env.action_space.shape[0])
     )
     net.apply(init_weights)
+    net.float()
     return net
 
 def critic(env, hidden1=400, hidden2=300):
@@ -36,6 +37,7 @@ def critic(env, hidden1=400, hidden2=300):
         nn.Linear(hidden2, 1)
     )
     net.apply(init_weights)
+    net.float()
     return net
 
 def features(state_space_size, hidden1=400):
@@ -44,4 +46,5 @@ def features(state_space_size, hidden1=400):
         nn.ReLU(),
     )
     net.apply(init_weights)
+    net.float()
     return net

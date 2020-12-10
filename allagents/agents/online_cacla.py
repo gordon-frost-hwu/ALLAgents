@@ -4,13 +4,16 @@ from all.logging import DummyWriter
 from torch.distributions.normal import Normal
 from all.agents import Agent
 
-class CACLA(Agent):
+
+class OnlineCACLA(Agent):
     '''
     Continuous Actor Critic Learning Automation (CACLA).
     CACLA is an implementation of the CACLA alogorithm found in van Hasselt and Wiering (2007).
     http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.75.7658&rep=rep1&type=pdf
-    This implementation tweaks the algorithm slightly by only updating weights at the end of an episode
-    and using a replay buffer to collect interaction samples. At the end of the episode, the replay buffer
+    This implementation tweaks the algorithm slightly by only updating the Actor's weights at the end of an episode
+    and using a replay buffer to collect interaction samples. The Temporal Difference Error is computed
+    and saved into the experience replay buffer at each timestep, allowing it to be used to update
+    the Actor at the end of the episode. At the end of the episode, the replay buffer
     gets sampled n_iter times to train the critic, and then separately another n_iter times to train actor
     A shared feature layer can also be used, but successful results did not need it
 
@@ -52,8 +55,9 @@ class CACLA(Agent):
         self._features = None
         self._action = None
         self._state = None
-        self._action_low = torch.tensor(action_space.low, device=policy.device)
-        self._action_high = torch.tensor(action_space.high, device=policy.device)
+        self._tde = None
+        self._action_low = torch.tensor(action_space.low, device=policy.device).float()
+        self._action_high = torch.tensor(action_space.high, device=policy.device).float()
 
     def _normal(self, output):
         if self._log:
@@ -61,8 +65,10 @@ class CACLA(Agent):
         return Normal(output, self.sigma)
 
     def act(self, state, reward):
-        self._train(state)
-        self.replay_buffer.store(self._state, self._action, reward, state)
+        self._train(state, reward)
+
+        if self._state is not None and self._tde is not None:
+            self.replay_buffer.store(self._state, self._action, self._tde, state)
         self._state = state
         self._action = self._choose_action(state)
         return self._action
@@ -76,23 +82,30 @@ class CACLA(Agent):
         # self.writer.add_scalar("action/det", deterministic_action)
 
         # Get the stochastic action by centering a Normal distribution on the policy output
-        stochastic_action = self._normal(deterministic_action).sample()
+        stochastic_action = self._normal(deterministic_action).sample().float()
 
         # Clip the stochastic action to the gym environment's action space
         stochastic_action = torch.max(stochastic_action, self._action_low)
         stochastic_action = torch.min(stochastic_action, self._action_high)
         return stochastic_action
 
-    def _train(self, states):
-        # only train (update weights) at the end of an episode; i.e. at a terminal state
-        if states.done:
-            for i in range(self.n_iter):
-                _, values, targets, _ = self.generate_targets()
-                # targets = rewards + self.discount_factor * values.detach()
-                self.update_critic(values=values, targets=targets)
-                # if not torch.isnan(targets[0]) and self._log:
-                #     self.writer.add_scalar("target", targets[0])
+    def _train(self, states, rewards):
+        if self._state is not None:
+            # forward pass
+            features = self.features(self._state) if self.features is not None else self._state
+            values = self.v(features)
 
+            # compute targets
+            features_next_states = self.features.target(states) if self.features is not None else states
+
+            # compute state_{t+1} value
+            next_state_value = self.v.target(features_next_states)
+            targets = rewards + self.discount_factor * next_state_value
+            self._tde = targets - values
+            self.update_critic(values, targets)
+
+        if states.done:
+            # only train (update weights) Actor at the end of an episode; i.e. at a terminal state
             for i in range(self.n_iter):
                 features, values, targets, actions = self.generate_targets()
                 greedy_actions = self.policy(features)
@@ -104,7 +117,7 @@ class CACLA(Agent):
 
     def update_actor_cacla(self, targets, values, greedy_actions, actions):
         # calculate TDE
-        advantages = targets - values.detach()
+        advantages = targets   # - values.detach()
 
         # Get the indexes where the TDE is positive (i.e. the action resulted in a good state transition)
         idx = torch.where(advantages > 0.0)[0]
@@ -118,7 +131,7 @@ class CACLA(Agent):
 
     def generate_targets(self):
         # sample from replay buffer
-        (states, actions, rewards, next_states, _) = self.replay_buffer.sample(self.minibatch_size)
+        (states, actions, tde, next_states, _) = self.replay_buffer.sample(self.minibatch_size)
 
         # forward pass
         features = self.features(states) if self.features is not None else states
@@ -129,8 +142,8 @@ class CACLA(Agent):
 
         # compute state_{t+1} value
         next_state_value = self.v.target(features_next_states)
-        targets = rewards + self.discount_factor * next_state_value
-        return features, values, targets, actions
+        # targets = rewards + self.discount_factor * next_state_value
+        return features, values, tde, actions
 
     def update_critic(self, values, targets):
         # backward pass

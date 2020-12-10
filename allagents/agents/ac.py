@@ -56,8 +56,8 @@ class AC(Agent):
         self._action = None
         self._state = None
         self._tde = None
-        self._action_low = torch.tensor(action_space.low, device=policy.device)
-        self._action_high = torch.tensor(action_space.high, device=policy.device)
+        self._action_low = torch.tensor(action_space.low, device=policy.device).float()
+        self._action_high = torch.tensor(action_space.high, device=policy.device).float()
 
     def _normal(self, output):
         if self._log:
@@ -82,7 +82,7 @@ class AC(Agent):
         # self.writer.add_scalar("action/det", deterministic_action)
 
         # Get the stochastic action by centering a Normal distribution on the policy output
-        stochastic_action = self._normal(deterministic_action).sample()
+        stochastic_action = self._normal(deterministic_action).sample().float()
 
         # Clip the stochastic action to the gym environment's action space
         stochastic_action = torch.max(stochastic_action, self._action_low)

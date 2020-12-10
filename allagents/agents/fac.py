@@ -6,15 +6,10 @@ from all.agents import Agent
 from queue import Queue
 import numpy as np
 
-class TOCLA(Agent):
+class ForwardAC(Agent):
     '''
-    True Online Continuous Learning Automation (TOCLA)
-    This algorithm uses the CACLA actor-update rule (of van Hasselt and Wiering (2007)) and the
-    Forward TD(lambda) algorithm for critic state-value estimates.
-    This implementation tweaks the CACLA actor implementation slightly by only updating weights at the end
-    of an episode and using a replay buffer to collect interaction samples. At the end of the episode,
-    the replay buffer gets sampled n_iter times.
-    CACLA: http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.75.7658&rep=rep1&type=pdf
+    Forward Actor-Critic from "Forward Actor-Critic for Nonlinear Function Approximation in Reinforcement Learning"
+    2017, Veeriah, van Seijen, and Sutton.
     Forward TD(lambda): https://arxiv.org/pdf/1608.05151.pdf
 
     Args:
@@ -54,8 +49,8 @@ class TOCLA(Agent):
         self.sigma = sigma
         self.sigma_decay = sigma_decay
         self.sigma_min = sigma_min
-        self._action_low = torch.tensor(action_space.low, device=policy.device)
-        self._action_high = torch.tensor(action_space.high, device=policy.device)
+        self._action_low = torch.tensor(action_space.low, device=policy.device).float()
+        self._action_high = torch.tensor(action_space.high, device=policy.device).float()
         self.policy = policy
 
         # Critic state
@@ -85,7 +80,7 @@ class TOCLA(Agent):
 
     def act(self, state, reward):
         self._train_critic(state, reward)
-        self._train_actor(state)
+        # self._train_actor(state)
 
         if self._state is not None and self._tde is not None:
             if self._log:
@@ -125,7 +120,9 @@ class TOCLA(Agent):
         # TODO - should this actually be before ready flag is set so that another step occurs? this is as per psuedocode
         if self._ready:
             self._u = self._u + self.c_final * self._tde
-            self._critic_update_weights()
+            s, u, r, sp, rp = self._fifo.get()
+            self._critic_update_weights(s, u, r, sp, rp)
+            self._train_actor(s, u, r, sp, rp)
 
         # reset stuff if we reach a terminal state
         if state.done:
@@ -135,7 +132,9 @@ class TOCLA(Agent):
 
             # Empty the queue if episode ended and train on contents
             while not self._fifo.empty():
-                self._critic_update_weights()
+                s, u, r, sp, rp = self._fifo.get()
+                self._critic_update_weights(s, u, r, sp, rp)
+                self._train_actor(s, u, r, sp, rp)
 
             # reset internal variables for start of next episode
             self._u_sync = 0
@@ -145,8 +144,7 @@ class TOCLA(Agent):
             self._v_current = 0
             self._ready = False
 
-    def _critic_update_weights(self):
-        s, u, r, sp, rp = self._fifo.get()
+    def _critic_update_weights(self, s, u, r, sp, rp):
         # Update critic weights
         v = self.critic(s)
         loss = mse_loss(v, self._u)
@@ -158,24 +156,15 @@ class TOCLA(Agent):
         if self.K != 1:
             self._u = (self._u - rp) / (self.discount_factor * self.trace_decay)
 
-    def _train_actor(self, state):
-        # only train (update weights) at the end of an episode; i.e. at a terminal state
-        if state.done:
-            for i in range(self.n_iter):
-                # features, values, targets, actions = self.generate_targets()
-                features, stochastic_actions, tde, _, _ = self._replay_buffer.sample(self.minibatch_size)
-                greedy_actions = self.policy(features)
+    def _train_actor(self, s, u, r, sp, rp):
+        distribution = self.policy(s)
+        # target = self._u
+        advantages = self._u - self.critic(s).detach()
+        policy_loss = -(advantages * self._normal(distribution).log_prob(self._action)).mean()
+        self.policy.reinforce(policy_loss)
 
-                # Get the indexes where the TDE is positive (i.e. the action resulted in a good state transition)
-                idx = torch.where(tde > 0.0)[0]
-                if len(idx) > 0:
-                    policy_loss = mse_loss(greedy_actions[idx], stochastic_actions[idx])
-
-                    if not torch.isnan(policy_loss):
-                        self.policy.reinforce(policy_loss)
-                    else:
-                        print("policy loss is NaN")
-
+        # Only decay the exploration at the end of an episode
+        if s.done:
             # Decay the exploration
             if self.sigma > self.sigma_min:
                 self.sigma *= self.sigma_decay
@@ -193,9 +182,6 @@ class TOCLA(Agent):
     def _choose_action(self, state):
         # If a feature ANN is provided, use it, otherwise raw state vector is used
         deterministic_action = self.policy.eval(state)
-        # uncomment to log the policy output
-        # if self._log:
-        # self.writer.add_scalar("action/det", deterministic_action)
 
         # Get the stochastic action by centering a Normal distribution on the policy output
         stochastic_action = self._normal(deterministic_action).sample()

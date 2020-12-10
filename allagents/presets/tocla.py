@@ -4,17 +4,21 @@ from all.logging import DummyWriter
 from all.memory import ExperienceReplayBuffer
 from all.policies import DeterministicPolicy
 
-import models
-from agents.fac import ForwardAC
+import allagents.models as models
+from allagents.agents.tocla import TOCLA
 
-def fac(
+def tocla(
         # Common settings
         device="cpu",
         discount_factor=0.99,   # gamma
         # Adam optimizer settings
-        lr_v=0.001266006463,
-        lr_pi=0.001369217032,
-        trace_decay=0.0413122279,
+        lr_v=0.001125209337,
+        lr_pi=0.00259986294,
+        trace_decay=0.5306405172,
+        # four runs
+        # lr_v=0.0006983937324,
+        # lr_pi=0.002654206888,
+        # trace_decay=0.5021468202,
         log=True,
         eps=0.01,   # from https://medium.com/autonomous-learning-library/radam-a-new-state-of-the-art-optimizer-for-rl-442c1e830564
         # Replay buffer settings
@@ -33,7 +37,7 @@ def fac(
         eps (float): Stability parameters for the Adam optimizer.
         replay_buffer_size (int): maximum replay buffer size that samples get taken from
     """
-    def _fac(env, writer=DummyWriter()):
+    def _tocla(env, writer=DummyWriter()):
         value_model = models.critic(env, hidden1=hidden1, hidden2=hidden2).to(device)
         policy_model = models.actor(env, hidden1=hidden1, hidden2=hidden2).to(device)
 
@@ -62,7 +66,7 @@ def fac(
 
 
         # TODO - reintroduce TimeFeature wrapper
-        return ForwardAC(v, policy, replay_buffer, env.action_space, log=log, trace_decay=trace_decay, writer=writer, discount_factor=discount_factor)
-    return _fac
+        return TOCLA(v, policy, replay_buffer, env.action_space, log=log, trace_decay=trace_decay, writer=writer, discount_factor=discount_factor)
+    return _tocla
 
-__all__ = ["fac"]
+__all__ = ["tocla"]

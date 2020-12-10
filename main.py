@@ -3,7 +3,7 @@ import argparse
 from all.environments import GymEnvironment
 from all.experiments import OptimisationExperiment
 from all.logging import ExperimentWriter
-import presets
+import allagents.presets as presets
 import os
 
 def run():

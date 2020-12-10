@@ -4,17 +4,17 @@ from all.logging import DummyWriter
 from all.memory import ExperienceReplayBuffer
 from all.policies import DeterministicPolicy
 
-import models
-from agents.online_cacla import OnlineCACLA
+import allagents.models as models
+from allagents.agents.ac import AC
 
-def online_cacla(
+def ac(
         # Common settings
         device="cpu",
         log=True,
         discount_factor=0.99,
         # Adam optimizer settings
-        lr_v=0.0007373596187,
-        lr_pi=0.004333557417,
+        lr_v=0.0008687286902,
+        lr_pi=0.0005309958359,
         eps=0.01,   # from https://medium.com/autonomous-learning-library/radam-a-new-state-of-the-art-optimizer-for-rl-442c1e830564
         # Replay buffer settings
         replay_buffer_size=4000,
@@ -32,7 +32,7 @@ def online_cacla(
         eps (float): Stability parameters for the Adam optimizer.
         replay_buffer_size (int): maximum replay buffer size that samples get taken from
     """
-    def _online_cacla(env, writer=DummyWriter()):
+    def _ac(env, writer=DummyWriter()):
         value_model = models.critic(env, hidden1=hidden1, hidden2=hidden2).to(device)
         policy_model = models.actor(env, hidden1=hidden1, hidden2=hidden2).to(device)
         # feature_model = models.features(env.state_space.shape[0]).to(device)
@@ -64,7 +64,7 @@ def online_cacla(
         replay_buffer = ExperienceReplayBuffer(replay_buffer_size, device=device)
 
         # TODO - reintroduce TimeFeature wrapper
-        return OnlineCACLA(features, v, policy, replay_buffer, env.action_space, log=log, writer=writer, discount_factor=discount_factor)
-    return _online_cacla
+        return AC(features, v, policy, replay_buffer, env.action_space, log=log, writer=writer, discount_factor=discount_factor)
+    return _ac
 
-__all__ = ["online_cacla"]
+__all__ = ["ac"]

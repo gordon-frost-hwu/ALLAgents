@@ -4,7 +4,7 @@ import os
 import numpy as np
 from copy import copy
 
-import presets
+import allagents.presets as presets
 
 # Autonomous Learning Library imports
 from all.environments import GymEnvironment
