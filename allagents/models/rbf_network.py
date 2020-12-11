@@ -1,3 +1,7 @@
+"""
+This code was obtained from: https://github.com/JeremyLinux/PyTorch-Radial-Basis-Function-Layer
+"""
+
 import torch
 import torch.nn as nn
 
@@ -142,8 +146,9 @@ class RBFNetwork(nn.Module):
         return out
 
 
-layer_widths = [2, 1]
-layer_centres = [40]
-basis_func = gaussian
-
-rbfnet = RBFNetwork(layer_widths, layer_centres)
+# Usage:
+# layer_widths = [2, 1]
+# layer_centres = [40]
+# basis_func = gaussian
+#
+# rbfnet = RBFNetwork(layer_widths, layer_centres)
