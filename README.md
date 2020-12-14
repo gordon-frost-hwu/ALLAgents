@@ -16,7 +16,7 @@ To run the cacla agent, you need:
 
 Then, cd into ALLAgents directory, and run:
 ```
-python3 main.py MountainCarContinuous-v0
+python3 main.py MountainCarContinuous-v0 tocla --episodes=150
 ```
 
 It should solve the MountainCarContinuous-v0 environment in around 200 episodes, and should solve the Pendulum-v0 environment in around 1200 episodes
