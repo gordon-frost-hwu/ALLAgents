@@ -3,9 +3,12 @@ from all.approximation import VNetwork, FeatureNetwork
 from all.logging import DummyWriter
 from all.memory import ExperienceReplayBuffer
 from all.policies import DeterministicPolicy
-
+from itertools import permutations
+from numpy import linspace
 import allagents.models as models
 from allagents.agents.fac import ForwardAC
+from all.environments.state import State
+import torch
 
 def fac(
         # Common settings
@@ -63,6 +66,20 @@ def fac(
                      normalise_inputs=True,
                      box=env.state_space,
                      )
+
+        r = linspace(-1, 1, 21)
+        states = State(torch.as_tensor(list(permutations(r, 2)), dtype=torch.float32).cuda())
+        for i in range(200):
+            values = v(states)
+            # print("values before: {0}".format(values[0:20]))
+            target_values = torch.as_tensor([-1000 for x in range(values.shape[0])], dtype=torch.float32).cuda()
+
+            loss = torch.nn.functional.mse_loss(values, target_values)
+            v.reinforce(loss)
+
+        new_values = v.eval(states)
+        print("values after: {0}".format(new_values[0:20]))
+
         replay_buffer = ExperienceReplayBuffer(replay_buffer_size, device=device)
 
 
