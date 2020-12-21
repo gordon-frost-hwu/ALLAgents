@@ -29,10 +29,10 @@ class ForwardAC(Agent):
                  trace_decay=0.9,  # lambda
                  k_max=50,
                  n=0.01,
-                 sigma=1.0,
+                 sigma=0.05,
                  log=True,
-                 sigma_decay=0.9995,
-                 sigma_min=0.1,
+                 sigma_decay=1.0,
+                 sigma_min=0.01,
                  n_iter=100,
                  minibatch_size=32,
                  writer=DummyWriter()):
@@ -40,10 +40,9 @@ class ForwardAC(Agent):
         self._log = log
         self._action = None
         self._state = None
-        self._tde = None
+        self.tde = None
 
         # Actor state
-        self._replay_buffer = buffer
         self.n_iter = n_iter
         self.minibatch_size = minibatch_size
         self.sigma = sigma
@@ -75,17 +74,16 @@ class ForwardAC(Agent):
         self._u = 0
         self._i = 0
         self._c = 1.0
-        self._v_current = 0
+        self.v_current = 0
         self._ready = False
 
     def act(self, state, reward):
         self._train_critic(state, reward)
         # self._train_actor(state)
 
-        if self._state is not None and self._tde is not None:
+        if self._state is not None and self.tde is not None:
             if self._log:
-                self.writer.add_scalar("state/tde", self._tde)
-            self._replay_buffer.store(self._state, self._action, self._tde, state)
+                self.writer.add_scalar("state/tde", self.tde)
 
         self._state = state
         self._action = self._choose_action(state)
@@ -103,23 +101,23 @@ class ForwardAC(Agent):
 
         if not self._fifo.full():
             self._fifo.put((self._state, self._action, reward, state, rho))
-        self._tde = reward + (self.discount_factor * v_next) - self._v_current
-        self._v_current = v_next
+        self.tde = reward + (self.discount_factor * v_next) - self.v_current
+        self.v_current = v_next
 
         if self._i == self.K - 1:
             self._u = self._u_sync
-            self._u_sync = self._v_current
+            self._u_sync = self.v_current
             self._i = 0
             self._c = 1.0
             self._ready = True
         else:
-            self._u_sync = self._u_sync + self._c * self._tde
+            self._u_sync = self._u_sync + self._c * self.tde
             self._i += 1
             self._c *= self.discount_factor * self.trace_decay
 
         # TODO - should this actually be before ready flag is set so that another step occurs? this is as per psuedocode
         if self._ready:
-            self._u = self._u + self.c_final * self._tde
+            self._u = self._u + self.c_final * self.tde
             s, u, r, sp, rp = self._fifo.get()
             self._critic_update_weights(s, u, r, sp, rp)
             self._train_actor(s, u, r, sp, rp)
@@ -141,7 +139,7 @@ class ForwardAC(Agent):
             # print("u sync set to 0: self._u: {0}".format(self._u))
             self._i = 0
             self._c = 1
-            self._v_current = 0
+            self.v_current = 0
             self._ready = False
 
     def _critic_update_weights(self, s, u, r, sp, rp):

@@ -123,6 +123,7 @@ class TOCLA(Agent):
         self._state = state
         self._step += 1
 
+        # TODO - clip stochastic action
         deterministic_action = self.policy(state)
         self._action = deterministic_action + exploration
         return deterministic_action

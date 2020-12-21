@@ -10,11 +10,16 @@ from allagents.agents.fac import ForwardAC
 def fac(
         # Common settings
         device="cpu",
-        discount_factor=0.99,   # gamma
+        discount_factor=0.99,
         # Adam optimizer settings
-        lr_v=0.001266006463,
-        lr_pi=0.001369217032,
-        trace_decay=0.0413122279,
+        # lr_v=0.001266006463,
+        # lr_pi=0.001369217032,
+        # trace_decay=0.0413122279,
+        lr_v=0.005,
+        lr_pi=0.00001,
+        trace_decay=0.93,
+        sigma=0.05,
+        sigma_decay=1.0,
         log=True,
         eps=0.01,   # from https://medium.com/autonomous-learning-library/radam-a-new-state-of-the-art-optimizer-for-rl-442c1e830564
         # Replay buffer settings
@@ -62,7 +67,15 @@ def fac(
 
 
         # TODO - reintroduce TimeFeature wrapper
-        return ForwardAC(v, policy, replay_buffer, env.action_space, log=log, trace_decay=trace_decay, writer=writer, discount_factor=discount_factor)
+        return ForwardAC(v, policy,
+                         replay_buffer,
+                         env.action_space,
+                         sigma=sigma,
+                         sigma_decay=sigma_decay,
+                         log=log,
+                         trace_decay=trace_decay,
+                         writer=writer,
+                         discount_factor=discount_factor)
     return _fac
 
 __all__ = ["fac"]
