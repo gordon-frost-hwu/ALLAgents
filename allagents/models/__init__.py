@@ -8,6 +8,7 @@ received from the environment.
 from all import nn
 import torch.nn
 from .rbf_network import gaussian, RBFNetwork
+from .rbf_kernel import RBFKernel
 
 # for how to initialise weights
 # https://stackoverflow.com/questions/49433936/how-to-initialize-weights-in-pytorch/49433937#49433937
@@ -17,7 +18,7 @@ def init_weights(m):
     # https://stackoverflow.com/questions/49433936/how-to-initialize-weights-in-pytorch
     if type(m) == nn.Linear:
         # torch.nn.init.xavier_uniform_(m.weight, gain=torch.nn.init.calculate_gain('tanh'))
-        torch.nn.init.uniform_(m.weight, a=-0.05, b=0.05)
+        torch.nn.init.uniform_(m.weight, a=-0.001, b=0.001)
         nn.init.constant_(m.bias.data, 0)
 
 
