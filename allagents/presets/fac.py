@@ -18,7 +18,7 @@ def fac(
         # lr_v=0.001266006463,
         # lr_pi=0.001369217032,
         # trace_decay=0.0413122279,
-        lr_v=0.005,
+        lr_v=0.01,
         lr_pi=0.00001,
         trace_decay=0.93,
         sigma=0.05,

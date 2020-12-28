@@ -77,7 +77,7 @@ class ForwardAC(Agent):
         self.v_current = 0
         self._ready = False
 
-    def act(self, state, reward):
+    def act(self, state, reward, explore=True):
         self._train_critic(state, reward)
         # self._train_actor(state)
 
@@ -86,7 +86,7 @@ class ForwardAC(Agent):
                 self.writer.add_scalar("state/tde", self.tde)
 
         self._state = state
-        self._action = self._choose_action(state)
+        self._action = self._choose_action(state) if explore else self._action
         return self._action
 
     def _train_critic(self, state, reward):
