@@ -109,9 +109,10 @@ class TOCLA(Agent):
         self._step += 1
         return self.policy.eval(state)
 
-    def act2(self, state, reward, exploration):
+    def act2(self, state, reward, exploration, train_actor=True):
         self._train_critic(state, reward)
-        self._train_actor(state)
+        if train_actor:
+            self._train_actor(state)
 
         if self._state is not None and self._tde is not None:
             if self._log:
