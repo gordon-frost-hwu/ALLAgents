@@ -15,11 +15,11 @@ import torch
 def tocla(
         # Common settings
         device="cpu",
-        discount_factor=0.98,   # gamma
+        discount_factor=0.0,   # gamma
         sigma=1.0,
         sigma_decay=0.9998,
-        lr_v=0.5,
-        lr_pi=0.00001,
+        lr_v=0.05,
+        lr_pi=0.0001,
         trace_decay=0.93,
         # Ten runs
         # lr_v=0.001125209337,
@@ -78,7 +78,7 @@ def tocla(
         r = linspace(-1, 1, 21)
         perms = list(permutations(r, 2))
         for perm in perms:
-            perm = features(torch.as_tensor(perm, device="cuda"))
+            perm = features(torch.as_tensor(perm, device="cuda", dtype=torch.float32))
             states = State(perm)
             # for i in range(200):
             values = v(states)
