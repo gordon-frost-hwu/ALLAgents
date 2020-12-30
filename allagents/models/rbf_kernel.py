@@ -19,22 +19,20 @@ class RBFKernel():
 
     def __call__(self, input):
         # print("RBF Kernel - input: {0}".format(input))
-        need_revert = False
-        if input.dim() > 1:
-            need_revert = True
-            input = input.squeeze(0)
-        size = (input.size(0), self.num_centres)
-        # [1 x num_rbfs]
-        x = input.unsqueeze(1).expand(size).flatten()
-        distances = (x - self.centres).pow(2)  # .pow(2).sum(-1).pow(0.5) * self.sigmas
-        activations = torch.exp(-distances / (2 * self.sigmas.pow(2)))
-        if need_revert:
-            activations = activations.unsqueeze(0)
-        # print("RBF Kernel - activations: {0}".format(activations))
-        return activations
-        # TODO - return tensor of output dim which is the rbf values
-        # return self.basis_func(distances)
-
+        with torch.no_grad():
+            need_revert = False
+            if input.dim() > 1:
+                need_revert = True
+                input = input.squeeze(0)
+            size = (input.size(0), self.num_centres)
+            # [1 x num_rbfs]
+            x = input.unsqueeze(1).expand(size).flatten()
+            distances = (x - self.centres).pow(2)  # .pow(2).sum(-1).pow(0.5) * self.sigmas
+            activations = torch.exp(-distances / (2 * self.sigmas.pow(2)))
+            if need_revert:
+                activations = activations.unsqueeze(0)
+            # print("RBF Kernel - activations: {0}".format(activations))
+            return activations
 
 # RBFs
 
