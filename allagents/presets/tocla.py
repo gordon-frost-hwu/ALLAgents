@@ -15,12 +15,12 @@ import torch
 def tocla(
         # Common settings
         device="cpu",
-        discount_factor=0.0,   # gamma
+        discount_factor=0.1,   # gamma
         sigma=1.0,
         sigma_decay=0.9998,
-        lr_v=0.05,
-        lr_pi=0.0001,
-        trace_decay=0.93,
+        lr_v=0.003,
+        lr_pi=0.000005,
+        trace_decay=0.5,
         # Ten runs
         # lr_v=0.001125209337,
         # lr_pi=0.00259986294,
@@ -74,7 +74,7 @@ def tocla(
                      )
         replay_buffer = MyReplayBuffer(replay_buffer_size, device=device)
 
-        features = RBFKernel([[-1.0, 1.0], [-1.0, 1.0]], 41, 0.1)
+        features = RBFKernel([[-1.0, 1.0], [-1.0, 1.0]], 41, 0.05)
         r = linspace(-1, 1, 21)
         perms = list(permutations(r, 2))
         for perm in perms:
@@ -83,7 +83,7 @@ def tocla(
             # for i in range(200):
             values = v(states)
             # print("values before: {0}".format(values[0:20]))
-            target_values = torch.as_tensor([-1000 for x in range(values.shape[0])], dtype=torch.float32).cuda()
+            target_values = torch.as_tensor([100 for x in range(values.shape[0])], dtype=torch.float32).cuda()
 
             loss = mse_loss(values, target_values)
             v.reinforce(loss)
