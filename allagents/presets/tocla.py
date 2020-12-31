@@ -19,7 +19,7 @@ def tocla(
         sigma=1.0,
         sigma_decay=0.9998,
         lr_v=0.003,
-        lr_pi=0.000005,
+        lr_pi=0.0001,
         trace_decay=0.5,
         # Ten runs
         # lr_v=0.001125209337,
@@ -78,8 +78,9 @@ def tocla(
         r = linspace(-1, 1, 21)
         perms = list(permutations(r, 2))
         for perm in perms:
-            perm = features(torch.as_tensor(perm, device="cuda", dtype=torch.float32))
-            states = State(perm)
+            # perm = features(torch.as_tensor(perm, device="cuda", dtype=torch.float32))
+            # states = State(perm)
+            states = State(torch.as_tensor(perm, device="cuda", dtype=torch.float32))
             # for i in range(200):
             values = v(states)
             # print("values before: {0}".format(values[0:20]))
