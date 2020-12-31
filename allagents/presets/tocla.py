@@ -19,8 +19,8 @@ def tocla(
         sigma=1.0,
         sigma_decay=0.9998,
         lr_v=0.003,
-        lr_pi=0.0001,
-        trace_decay=0.5,
+        lr_pi=0.01,
+        trace_decay=0.98,
         # Ten runs
         # lr_v=0.001125209337,
         # lr_pi=0.00259986294,
@@ -84,7 +84,7 @@ def tocla(
             # for i in range(200):
             values = v(states)
             # print("values before: {0}".format(values[0:20]))
-            target_values = torch.as_tensor([100 for x in range(values.shape[0])], dtype=torch.float32).cuda()
+            target_values = torch.as_tensor([0 for x in range(values.shape[0])], dtype=torch.float32).cuda()
 
             loss = mse_loss(values, target_values)
             v.reinforce(loss)
