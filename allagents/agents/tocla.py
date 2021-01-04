@@ -119,7 +119,8 @@ class TOCLA(Agent):
                 # print(self.writer.file_writer.get_logdir())
                 self.writer.add_scalar("state/tde", self._tde.detach())
             # action = self._action.detach()
-            self._replay_buffer.store(self._state, self._action.clone().detach() - exploration, self._action.clone().detach(), self._tde.detach(), state)
+            if train_actor:
+                self._replay_buffer.store(self._state, self._action.clone().detach() - exploration, self._action.clone().detach(), self._tde.detach(), state)
 
         self._state = state
         self._step += 1
@@ -190,6 +191,7 @@ class TOCLA(Agent):
     def _critic_update_weights(self):
         s, u, r, sp, rp = self._fifo.get()
         # Update critic weights
+        # print("Critic updating with state: {0} -> {1}".format(s.raw, self._u))
         v = self.critic(s)
         # below indexing due to /home/gordon/software/ALLAgents/allagents/agents/tocla.py:192: UserWarning: Using a target size (torch.Size([1, 1, 1])) that is different to the input size (torch.Size([1])). This will likely lead to incorrect results due to broadcasting. Please ensure they have the same size.
         loss = mse_loss(v, self._u)
