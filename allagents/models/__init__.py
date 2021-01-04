@@ -25,10 +25,10 @@ def init_weights(m):
 def create_net(input_dim, output_dim, hidden1, hidden2):
     net = nn.Sequential(
         nn.Linear(input_dim, hidden1),
-        nn.Tanh(),
+        # nn.Tanh(),
         # nn.Linear(hidden1, hidden2),
         # nn.Tanh(),
-        # nn.ReLU(),
+        nn.ReLU(),
         nn.Linear(hidden1, output_dim)
     )
     # net = RBFNetwork([input_dim, output_dim], [40])
