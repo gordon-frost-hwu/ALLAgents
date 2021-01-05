@@ -19,7 +19,7 @@ def tocla(
         sigma=1.0,
         sigma_decay=0.9998,
         lr_v=0.003,
-        lr_pi=0.00003,
+        lr_pi=0.00008,
         trace_decay=0.98,
         # Ten runs
         # lr_v=0.001125209337,
@@ -32,7 +32,7 @@ def tocla(
         log=True,
         eps=0.01,   # from https://medium.com/autonomous-learning-library/radam-a-new-state-of-the-art-optimizer-for-rl-442c1e830564
         # Replay buffer settings
-        replay_buffer_size=4000,    # was 4000
+        replay_buffer_size=350,    # was 4000
         hidden1=400,
         hidden2=300,
 ):
