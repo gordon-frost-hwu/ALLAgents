@@ -87,7 +87,7 @@ def tocla(
             v.reinforce(loss)
         
         # initialise the policy output to sensible values
-        for i in range(1000):
+        for i in range(5000):
             values = policy(states)
             target_values = torch.as_tensor([0 for x in range(values.shape[0])], dtype=torch.float32).cuda()
             loss = mse_loss(values, target_values)
