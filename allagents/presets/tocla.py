@@ -18,8 +18,8 @@ def tocla(
         discount_factor=0.1,   # gamma
         sigma=1.0,
         sigma_decay=0.9998,
-        lr_v=0.003,
-        lr_pi=0.00008,
+        lr_v=0.009,
+        lr_pi=0.00001,
         trace_decay=0.98,
         # Ten runs
         # lr_v=0.001125209337,
@@ -77,22 +77,39 @@ def tocla(
         features = RBFKernel([[-1.0, 1.0], [-1.0, 1.0]], 41, 0.05)
         r = linspace(-1, 1, 21)
         perms = list(permutations(r, 2))
-        
-        for perm in perms:
-            # perm = features(torch.as_tensor(perm, device="cuda", dtype=torch.float32))
-            # states = State(perm)
-            states = State(torch.as_tensor(perm, device="cuda", dtype=torch.float32))
-            # for i in range(200):
-            values = v(states)
-            # print("values before: {0}".format(values[0:20]))
-            target_values = torch.as_tensor([-20 for x in range(values.shape[0])], dtype=torch.float32).cuda()
+        states = State(torch.as_tensor(perms, device="cuda", dtype=torch.float32))
 
+        # initialise the value function to sensible values
+        for i in range(1000):
+            values = v(states)
+            target_values = torch.as_tensor([-20 for x in range(values.shape[0])], dtype=torch.float32).cuda()
             loss = mse_loss(values, target_values)
             v.reinforce(loss)
         
-        with torch.no_grad():
-            new_values = v.eval(states)
-            print("values after: {0}".format(new_values[0:20]))
+        # initialise the policy output to sensible values
+        for i in range(1000):
+            values = policy(states)
+            target_values = torch.as_tensor([0 for x in range(values.shape[0])], dtype=torch.float32).cuda()
+            loss = mse_loss(values, target_values)
+            policy.reinforce(loss)
+
+        # for perm in perms:
+        #     # perm = features(torch.as_tensor(perm, device="cuda", dtype=torch.float32))
+        #     # states = State(perm)
+        #     states = State(torch.as_tensor(perm, device="cuda", dtype=torch.float32))
+        #     # for i in range(200):
+        #     values = v(states)
+        #     # print("values before: {0}".format(values[0:20]))
+        #     target_values = torch.as_tensor([-20 for x in range(values.shape[0])], dtype=torch.float32).cuda()
+
+        #     loss = mse_loss(values, target_values)
+        #     v.reinforce(loss)
+        
+        
+        new_values = v.eval(states)
+        new_values_policy = policy.eval(states)
+        print("values after: {0}".format(new_values[0:20]))
+        print("policy values after: {0}".format(new_values_policy[0:20]))
 
         # TODO - reintroduce TimeFeature wrapper
         return TOCLA(v, policy, replay_buffer, env.action_space,
