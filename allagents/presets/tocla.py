@@ -79,17 +79,17 @@ def tocla(
         perms = list(permutations(r, 2))
         states = State(torch.as_tensor(perms, device="cuda", dtype=torch.float32))
 
+        target_values = torch.as_tensor([0 for x in range(len(states))], dtype=torch.float32).cuda()
         # initialise the value function to sensible values
         for i in range(1000):
             values = v(states)
-            target_values = torch.as_tensor([0 for x in range(values.shape[0])], dtype=torch.float32).cuda()
             loss = mse_loss(values, target_values)
             v.reinforce(loss)
         
+        target_values = torch.as_tensor([[0] for x in range(len(states))], dtype=torch.float32).cuda()
         # initialise the policy output to sensible values
         for i in range(5000):
             values = policy(states)
-            target_values = torch.as_tensor([0 for x in range(values.shape[0])], dtype=torch.float32).cuda()
             loss = mse_loss(values, target_values)
             policy.reinforce(loss)
 
