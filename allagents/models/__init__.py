@@ -18,7 +18,7 @@ def init_weights(m):
     # https://stackoverflow.com/questions/49433936/how-to-initialize-weights-in-pytorch
     if type(m) == nn.Linear:
         # torch.nn.init.xavier_uniform_(m.weight, gain=torch.nn.init.calculate_gain('tanh'))
-        torch.nn.init.uniform_(m.weight, a=-0.1, b=0.1)
+        torch.nn.init.uniform_(m.weight, a=-0.01, b=0.01)
         nn.init.constant_(m.bias.data, 0)
 
 
@@ -26,9 +26,10 @@ def create_net(input_dim, output_dim, hidden1, hidden2):
     net = nn.Sequential(
         nn.Linear(input_dim, hidden1),
         # nn.Tanh(),
+        nn.ReLU(),
         # nn.Linear(hidden1, hidden2),
         # nn.Tanh(),
-        nn.ReLU(),
+        # nn.ReLU(),
         nn.Linear(hidden1, output_dim)
     )
     # net = RBFNetwork([input_dim, output_dim], [40])

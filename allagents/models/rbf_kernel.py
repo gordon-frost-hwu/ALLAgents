@@ -18,20 +18,33 @@ class RBFKernel():
 
 
     def __call__(self, input):
-        # print("RBF Kernel - input: {0}".format(input))
+        # input = [N x M]
+        input = input.detach().clone()
+        # print("___call___")
         with torch.no_grad():
+            num_rows = input.size(0)
+
             need_revert = False
-            if input.dim() > 1:
-                need_revert = True
-                input = input.squeeze(0)
-            size = (input.size(0), self.num_centres)
-            # [1 x num_rbfs]
-            x = input.unsqueeze(1).expand(size).flatten()
+            # if input.dim() > 1:
+            #     need_revert = True
+            #     input = input.squeeze(0)
+            # print("input size: {0}".format(input.size()))
+            size = (1, input.size(0), self.num_centres) 
+            # print("size: {0}".format(size))
+            
+            # repeat columns for num_rbfs
+            # [N x num_rbfs]
+            x = torch.repeat_interleave(input, repeats=self.num_centres, dim=1)
+
+            # print("x: {0}".format(x))
+            # print("size after unsqueeze: {0}".format(x.size()))
+            # x = x.expand(size).flatten()
             distances = (x - self.centres).pow(2)  # .pow(2).sum(-1).pow(0.5) * self.sigmas
             activations = torch.exp(-distances / (2 * self.sigmas.pow(2)))
-            if need_revert:
-                activations = activations.unsqueeze(0)
+            # if need_revert:
+            #     activations = activations.unsqueeze(0)
             # print("RBF Kernel - activations: {0}".format(activations))
+            # print(activations.size())
             return activations
 
 # RBFs

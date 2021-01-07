@@ -19,7 +19,7 @@ def tocla(
         sigma=1.0,
         sigma_decay=0.9998,
         lr_v=0.009,
-        lr_pi=0.000005,
+        lr_pi=0.0000005,
         trace_decay=0.98,
         # Ten runs
         # lr_v=0.001125209337,
@@ -74,9 +74,14 @@ def tocla(
                      )
         replay_buffer = MyReplayBuffer(replay_buffer_size, device=device)
 
-        features = RBFKernel([[-1.0, 1.0], [-1.0, 1.0]], 41, 0.05)
+        # torch.save(policy, "{0}/before_init_policy.pt".format(writer.log_dir))
+        # torch.save(v, "{0}/before_init_critic.pt".format(writer.log_dir))
+
+        features = RBFKernel([[-1.0, 1.0], [-1.0, 1.0]], 41, 0.1)
         r = linspace(-1, 1, 21)
         perms = list(permutations(r, 2))
+        perms = torch.as_tensor(perms, device="cuda", dtype=torch.float32)
+        perms = features(perms)
         states = State(torch.as_tensor(perms, device="cuda", dtype=torch.float32))
 
         target_values = torch.as_tensor([0 for x in range(len(states))], dtype=torch.float32).cuda()
@@ -92,19 +97,6 @@ def tocla(
             values = policy(states)
             loss = mse_loss(values, target_values)
             policy.reinforce(loss)
-
-        # for perm in perms:
-        #     # perm = features(torch.as_tensor(perm, device="cuda", dtype=torch.float32))
-        #     # states = State(perm)
-        #     states = State(torch.as_tensor(perm, device="cuda", dtype=torch.float32))
-        #     # for i in range(200):
-        #     values = v(states)
-        #     # print("values before: {0}".format(values[0:20]))
-        #     target_values = torch.as_tensor([-20 for x in range(values.shape[0])], dtype=torch.float32).cuda()
-
-        #     loss = mse_loss(values, target_values)
-        #     v.reinforce(loss)
-        
         
         new_values = v.eval(states)
         new_values_policy = policy.eval(states)
