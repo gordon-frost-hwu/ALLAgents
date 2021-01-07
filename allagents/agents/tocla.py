@@ -38,8 +38,8 @@ class TOCLA(Agent):
                  log=True,
                  sigma_decay=0.9995,
                  sigma_min=0.1,
-                 n_iter=10,
-                 minibatch_size=32,
+                 n_iter=1,
+                 minibatch_size=30,
                  writer=DummyWriter()):
         self.writer = writer
         self._log = log
@@ -233,6 +233,8 @@ class TOCLA(Agent):
             # Decay the exploration
             if self.sigma > self.sigma_min:
                 self.sigma *= self.sigma_decay
+        
+        self.writer.add_scalar("policy_updated", 1 if policy_updated else 0)
 
     def update_critic(self, values, targets):
         # backward pass
