@@ -77,7 +77,7 @@ def tocla(
         # torch.save(policy, "{0}/before_init_policy.pt".format(writer.log_dir))
         # torch.save(v, "{0}/before_init_critic.pt".format(writer.log_dir))
 
-        features = RBFKernel([[-1.0, 1.0], [-1.0, 1.0]], 41, 0.1)
+        features = RBFKernel([[-1.0, 1.0], [-1.0, 1.0]], 41, 0.3)
         r = linspace(-1, 1, 21)
         perms = list(permutations(r, 2))
         perms = torch.as_tensor(perms, device="cuda", dtype=torch.float32)
